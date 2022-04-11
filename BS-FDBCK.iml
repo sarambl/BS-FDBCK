@@ -4,6 +4,11 @@
     <exclude-output />
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/Data" />
+      <excludeFolder url="file://$MODULE_DIR$/.idea/inspectionProfiles" />
+      <excludeFolder url="file://$MODULE_DIR$/bs_fdbck/notebooks/archive_now" />
+      <excludeFolder url="file://$MODULE_DIR$/bs_fdbck/notebooks/archive_old" />
+      <excludeFolder url="file://$MODULE_DIR$/bs_fdbck/notebooks/Plots" />
+      <excludeFolder url="file://$MODULE_DIR$/bs_fdbck/preprocess/archive" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
