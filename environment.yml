@@ -1,0 +1,37 @@
+name: env_bs_fdbck
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - bokeh
+  - cartopy
+  - cftime
+  - conda
+  - conda-build
+  - dask
+  - jupyterlab
+  - jupytext
+  - matplotlib
+  - matplotlib-base
+  - nbconvert
+  - nbformat
+  - ncl
+  - nodejs
+  - numpy
+  - pandas
+  - pandoc
+  - conda-forge::pyngl
+  - conda-forge::pynio
+  - scikit-learn
+  - scipy
+  - seaborn
+  - widgetsnbextension
+  - pip
+  - xarray
+  - pip:
+    - dask-labextension
+    - ebas-io
+    - jupyter
+    - nbresuse
+prefix: /persistent01/miniconda3/envs/env_sec_v2
+

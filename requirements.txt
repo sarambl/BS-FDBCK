@@ -1,0 +1,11 @@
+xarray
+numpy
+matplotlib
+dask
+pandas
+scipy
+seaborn
+Cartopy
+Shapely
+ngl
+ipython

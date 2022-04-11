@@ -1,7 +1,5 @@
-# SECT_SENS
-Analysis for paper:
-- Blichner, S. M., Sporre, M. K., and Berntsen, T. K.: Reduced effective radiative forcing from cloud-aerosol interactions (ERFaci) with improved treatment of early aerosol growth in an Earth System Model, Atmos. Chem. Phys. Discuss. [preprint], https://doi.org/10.5194/acp-2021-151, in review, 2021.
-
+# BS-FDBCK
+Analysis for BSOA paper:
 
 
 # Setup:
