@@ -74,9 +74,9 @@ class Sizedistribution:
     def __init__(self,
                  case_name,
                  from_time, to_time,
-                 dlim_sec,
-                 isSectional,
-                 time_res,
+                 dlim_sec = None,
+                 isSectional = False,
+                 time_res ='hour',
                  raw_data_path=constants.get_input_datapath(), space_res='full',
                  nr_bins=5, print_stat=False, model_name='NorESM', history_field='.h0.',
                  locations=None,#constants.locations,
@@ -95,6 +95,8 @@ class Sizedistribution:
         :param print_stat:
         :param model_name:
         """
+        if dlim_sec is None:
+            dlim_sec = [5,39.6]
         if chunks is None:
             chunks = {'diameter': 20}
         self.chunks = chunks

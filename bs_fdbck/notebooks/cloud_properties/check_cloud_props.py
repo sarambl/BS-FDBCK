@@ -18,429 +18,360 @@
 import xarray as xr
 
 import pandas as pd
-
 import matplotlib.pyplot as plt
-import numpy as np
-
 from pathlib import Path
+from bs_fdbck.constants import path_extract_latlon_outdata
+from dask.diagnostics import ProgressBar
+import seaborn as sns
 
-from bs_fdbck.constants import measurements_path, path_outdata, path_extract_latlon_outdata
 
 # %%
-xr.set_options(keep_attrs=True) 
+from bs_fdbck.util.BSOA_datamanip import compute_total_tau, broadcase_station_data, change_units_and_compute_vars, \
+    get_dic_df_mod
 
 # %%
-path_extract_latlon_outdata
-
-# %%
-lat_smr = 61.85
-lon_smr = 24.28
-
-# %%
-fn1 = Path('/proj/bolinc/users/x_sarbl/noresm_archive/OsloAero_intBVOC_f19_f19_mg17_full/atm/OsloAero_intBVOC_f19_f19_mg17_full.h1._2012-01-01-2015-01-01_concat_subs_22.0-30.0_60.0-66.0.nc')
-
-# %%
-fn1.stem
-
-# %%
-fn1_2 = fn1.parent / f'{fn1.stem}_sort.nc'
-
-# %%
-fn2 = path_extract_latlon_outdata/ 'OsloAero_intBVOC_f19_f19_mg17_ssp245/OsloAero_intBVOC_f19_f19_mg17_ssp245.h1._2015-01-01-2019-01-01_concat_subs_22.0-30.0_60.0-66.0.nc'
-
-# %%
-
-# %%
-fn2_2 = fn2.parent / f'{fn2.stem}_sort.nc'
-
-# %%
-
-# %%
-case_name = 'OsloAero_intBVOC_f19_f19_mg17_full'
+def make_fn(case, v_x, v_y, comment=''):
+    _x = v_x.split('(')[0]
+    _y = v_y.split('(')[0]
+    f = f'dist_plots_all_years_f19_{comment}_{case}_{_x}_{_y}.png'
+    return plot_path /f
 
 
-cases = [case_name]
-
-# %%
-from pathlib import Path
 
 # %%
 plot_path = Path('Plots')
 
+# %%
+xr.set_options(keep_attrs=True) 
+
+# %% [markdown]
+# ## Get observational data
 
 # %%
-def make_fn(case, v_x, v_y):
-    _x = v_x.split('(')[0]
-    _y = v_y.split('(')[0]
-    f = f'scat_{case}_{_x}_{_y}.png'
-    return plot_path /f
+import pandas as pd
+
+# %%
+
+# %%
+from bs_fdbck.constants import path_measurement_data
+
+# %%
+fn = path_measurement_data / 'SourceData_Yli_Juuti2021.xls'
+
+df_hyy_1 = pd.read_excel(fn, sheet_name=4, header=1,)# usecols=range(7,12),nrows=7)
+
+df_hyy_1.head()
+#df_hyy_1y= df_hyy_1y.rename({'year.1':'year',
+#                            'T (degree C).1':'T (degree C)',
+#                             'OA (microgram m^-3).1':'OA (microgram m^-3)',
+#                             'N100 (cm^-3).1':'N100 (cm^-3)'
+#                            }, axis=1)
+#df_hyy_1y['year'] = pd.to_datetime(df_hyy_1y['year'].apply(x:str(x)))
+
+df_hyy_1
+
+# %%
+import pandas as pd
+
+# %%
+df_hyy_1['date'] = df_hyy_1.apply(lambda x: f'{x.year:.0f}-{x.month:02.0f}-{x.day:02.0f}', axis=1)
+
+df_hyy_1['date'] = pd.to_datetime(df_hyy_1['date'] )
 
 
 # %%
-plot_path.mkdir(exist_ok=True, parents=True)
+df_hyy_1 = df_hyy_1.set_index(['date','LAT','LON'])
+
+# %%
+df_hyy_1
+
+# %%
+
+# %% tags=[]
+#df_hyy_1['OA_category'] 
+
+df_hyy_1['OA_low'] = df_hyy_1['OA (microgram m^-3)']<2
+df_hyy_1['OA_high']= df_hyy_1['OA (microgram m^-3)']>2
+ddf_hyy_1=df_hyy_1.assign(OA_category= pd.NA)
+df_hyy_1.loc[df_hyy_1['OA_high'], 'OA_category'] = 'OA high'
+df_hyy_1.loc[df_hyy_1['OA_low'], 'OA_category'] = 'OA low'
+
+
+
+# %%
+bins = pd.IntervalIndex.from_tuples([(60, 100), (100, 140), (140, 180), (180, 220), (220, 260), (260, 300), (300, 340)])
+
+# %%
+labels=[ 80, 120, 160, 200, 240, 280, 320]
+
+# %%
+df_hyy_1['CWP_cut']=pd.cut(df_hyy_1['CWP (g m^-2)'], bins=bins, labels=labels)
+df_hyy_1['CWP_qcut']=pd.qcut(df_hyy_1['CWP (g m^-2)'], 6)#bins=bins, labels=labels)
+
+# %%
+df_hyy_1['CWP_qcutl'] = df_hyy_1['CWP_qcut'].apply(lambda x:x.mid)
+
+df_hyy_1['CWP_cutl'] = df_hyy_1['CWP_cut'].apply(lambda x:x.mid)
+
+# %%
+df_hyy_1['OA (microgram m^-3)'][df_hyy_1['OA_low']].plot.hist(bins=50, alpha=0.4, label='obs')
+df_hyy_1['OA (microgram m^-3)'][df_hyy_1['OA_high']].plot.hist(bins=50, alpha=0.4, label='obs')
+
+
+
+# %% [markdown] tags=[]
+# ## Get model data:
+
+# %% [markdown] tags=[]
+# ### Settings
+
+# %%
+lat_smr = 61.85
+lon_smr = 24.28
+model_lev_i=-1
+
+# %%
+temperature = 273.15  # K
+
+# %%
+case_name = 'OsloAero_intBVOC_f19_f19_mg17_fssp245'
+
+# %%
+
+fn1 = Path('/proj/bolinc/users/x_sarbl/noresm_archive/OsloAero_intBVOC_f19_f19_mg17_full/atm/OsloAero_intBVOC_f19_f19_mg17_full.h1._2012-01-01-2015-01-01_concat_subs_22.0-30.0_60.0-66.0.nc')
+
+fn1_2 = path_extract_latlon_outdata/ 'OsloAero_intBVOC_f19_f19_mg17_full' / f'{fn1.stem}_sort.nc'
+
+fn2 = path_extract_latlon_outdata/ 'OsloAero_intBVOC_f19_f19_mg17_ssp245/OsloAero_intBVOC_f19_f19_mg17_ssp245.h1._2015-01-01-2019-01-01_concat_subs_22.0-30.0_60.0-66.0.nc'
+
+fn2_2 = fn2.parent / f'{fn2.stem}_sort.nc'
+
+
+
+fn_comb = path_extract_latlon_outdata/ 'OsloAero_intBVOC_f19_f19_mg17_fssp245'/f'{case_name}.h1._2012-01-01-2019-01-01_concat_subs_22.0-30.0_60.0-66.0.nc'
+fn_comb_lev1 = path_extract_latlon_outdata/case_name/f'{case_name}.h1._2012-01-01-2019-01-01_concat_subs_22.0-30.0_60.0-66.0_lev-1.nc'
+fn_comb_lev1_final = path_extract_latlon_outdata/ case_name/f'{case_name}.h1._2012-01-01-2015-01-01_concat_subs_22.0-30.0_60.0-66.0_lev1_final.nc'
+fn_comb_lev1_final_csv = path_extract_latlon_outdata/ case_name/f'{case_name}.h1._2012-01-01-2015-01-01_concat_subs_22.0-30.0_60.0-66.0_lev1_final.csv'
+
+# %%
+
+cases = [case_name]
 
 # %%
 varl =['DOD500','DOD440','ACTREL','ACTNL','TGCLDLWP', #,'SOA_A1',
-       'H2SO4','SOA_LV','COAGNUCL','FORMRATE','T','FCTL',
+       'H2SO4','SOA_LV','COAGNUCL','FORMRATE','T'
+       ,'FCTL',
        'TOT_CLD_VISTAU','TOT_ICLD_VISTAU','TGCLDCWP',
-       'TAUTLOGMODIS',
-       'MEANTAU_ISCCP',
-       'LWPMODIS','CLWMODIS','REFFCLWMODIS','TAUTMODIS','TAUWMODIS',
-      
+       'CLDFREE',
       'SOA_NA','SOA_A1','OM_NI','OM_AI','OM_AC','SO4_NA','SO4_A1','SO4_A2','SO4_AC','SO4_PR',
       'BC_N','BC_AX','BC_NI','BC_A','BC_AI','BC_AC','SS_A1','SS_A2','SS_A3','DST_A2','DST_A3', 
-      ] 
+       'FSDSC','FSDSCDRF'
+      ]
 
+
+# %% [markdown]
+# ## Station variables
 
 # %%
 varl_st = [      'SOA_NA','SOA_A1','OM_NI','OM_AI','OM_AC','SO4_NA','SO4_A1','SO4_A2','SO4_AC','SO4_PR',
-      'BC_N','BC_AX','BC_NI','BC_A','BC_AI','BC_AC','SS_A1','SS_A2','SS_A3','DST_A2','DST_A3']
-
-# %% [markdown]
-# ## Load observations: 
-
-# %% [markdown]
-# ## Open model dataset: 
-#
-
-# %% [markdown]
-# ds_mod1 = xr.open_dataset(fn1, chunks = {'time':48})#[fn1,fn2])#.sortby('time')
-# ds_mod2 = xr.open_dataset(fn2, chunks = {'time':48})
-
-# %% [markdown]
-# varl1 = set(ds_mod1.data_vars)
-#
-# varl2 = set(ds_mod2.data_vars)
-#
-#
-# varl =list(varl1.intersection(varl2))
-
-# %% [markdown]
-# ds_mod1 = ds_mod1[varl].sortby('time').sel(time=slice('2012','2014'))
-#
-# ds_mod2 = ds_mod2[varl].sortby('time').sel(time=slice('2015','2018'))
-
-# %% [markdown]
-# ds_mod1
-
-# %%
-import dask.array as da
-from dask.diagnostics import ProgressBar
+      'BC_N','BC_AX','BC_NI','BC_A','BC_AI','BC_AC','SS_A1','SS_A2','SS_A3','DST_A2','DST_A3',
+                 ]
 
 
-# %% [markdown]
-# delayed_obj = ds_mod1.to_netcdf(fn1_2, compute=False)
-# with ProgressBar():
-#     results = delayed_obj.compute()
-#     
-#     
+varl_cl = ['TOT_CLD_VISTAU','TOT_ICLD_VISTAU','TGCLDCWP','TGCLDLWP','TGCLDIWP',
+           'TOT_CLD_VISTAU_s','TOT_ICLD_VISTAU_s','optical_depth',
+           'CLDFREE',
+           'FCTL',
+           'ACTREL','ACTNL','TGCLDLWP',
+           'FSDSC','FSDSCDRF',
+           'FCTI',
+           'FCTL',
+           'FLNS',
+           'FLNSC',
+           'FLNT',
+           'FLNTCDRF',
+           'FLNT_DRF',
+           'FLUS',
+           'FLUTC','FORMRATE',
+           'FREQI',
+           'FREQL',
+           'FSDSCDRF',
+           'FSDS_DRF',
+           'FSNS',
+           'FSNSC',
+           'FSNT',
+           'FSNTCDRF',
+           'FSNT_DRF',
+           'FSUS_DRF',
+           'FSUTADRF',
+           ]
 
-# %% [markdown]
-# delayed_obj = ds_mod2.to_netcdf(fn2_2, compute=False)
-# with ProgressBar():
-#     results = delayed_obj.compute()
-
-# %% [markdown]
-# ds_mod = xr.open_mfdataset([fn1_2,fn2_2], combine='by_coords', concat_dim='time')
-
-# %%
-fn_comb = path_extract_latlon_outdata/ 'OsloAero_intBVOC_f19_f19_mg17_fssp245'/'OsloAero_intBVOC_f19_f19_mg17_fssp245.h1._2012-01-01-2019-01-01_concat_subs_22.0-30.0_60.0-66.0.nc'
-
-
-# %%
-fn_comb_lev1 = path_extract_latlon_outdata/ 'OsloAero_intBVOC_f19_f19_mg17_fssp245'/'OsloAero_intBVOC_f19_f19_mg17_fssp245.h1._2012-01-01-2019-01-01_concat_subs_22.0-30.0_60.0-66.0_lev-1.nc'
-fn_comb_lev1_dailymedian = path_extract_latlon_outdata/ 'OsloAero_intBVOC_f19_f19_mg17_fssp245'/'OsloAero_intBVOC_f19_f19_mg17_fssp245.h1._2012-01-01-2019-01-01_concat_subs_22.0-30.0_60.0-66.0_lev-1_dailymedian.nc'
-
-
-
-
-# %%
-fn_comb.parent.mkdir(exist_ok=True,)
-
-# %% [markdown]
-#
-# delayed_obj = ds_mod.to_netcdf(fn_comb, compute = False)
-# with ProgressBar():
-#     results = delayed_obj.compute()
 
 # %% [markdown] tags=[]
-# ds_mod = xr.concat([ds_mod1[varl].sel(time=slice('2012','2014')), ds_mod2[varl].sel(time=slice('2015','2018'))], dim='time')
+# ## If file not already createad already, skip this part
+
+# %%
+fn_comb_lev1.exists()
+
+# %% tags=[]
+if not fn_comb.exists():
+    ds_mod1 = xr.open_dataset(fn1, chunks = {'time':48})#[fn1,fn2])#.sortby('time')
+    ds_mod2 = xr.open_dataset(fn2, chunks = {'time':48})
+
+    varl1 = set(ds_mod1.data_vars)
+
+    varl2 = set(ds_mod2.data_vars)
+
+
+    varl =list(varl1.intersection(varl2))
+
+    ds_mod1 = ds_mod1[varl].sortby('time').sel(time=slice('2012','2014'))
+
+    ds_mod2 = ds_mod2[varl].sortby('time').sel(time=slice('2015','2018'))
+
+
+    delayed_obj = ds_mod1.to_netcdf(fn1_2, compute=False)
+    with ProgressBar():
+        results = delayed_obj.compute()
+
+    delayed_obj = ds_mod2.to_netcdf(fn2_2, compute=False)
+    with ProgressBar():
+        results = delayed_obj.compute()
+
+    ds_mod = xr.open_mfdataset([fn1_2,fn2_2], combine='by_coords', concat_dim='time')
+
+    fn_comb.parent.mkdir(exist_ok=True,)
+
+    delayed_obj = ds_mod.to_netcdf(fn_comb, compute = False)
+    with ProgressBar():
+        results = delayed_obj.compute()
+
+    #ds_mod = xr.concat([ds_mod1[varl].sel(time=slice('2012','2014')), ds_mod2[varl].sel(time=slice('2015','2018'))], dim='time')
+
+
+
+    ### Select hyytiala grid cell: 
+if not fn_comb_lev1.exists():
+    ds_mod = xr.open_dataset(fn_comb, chunks = {'time':48})#[fn1,fn2])#.sortby('time')
+    #ds_mod2 = xr.open_dataset(fn2, chunks = {'time':48})
+
+    ds_mod = compute_total_tau(ds_mod)
+
+    ds_mod = ds_mod.sortby('time')#.sel(time=slice('2012','2014'))
+
+    ds_mod = ds_mod.isel(lev = model_lev_i)
+
+
+    delayed_obj = ds_mod.to_netcdf(fn_comb_lev1, compute=False)
+    print('hey')
+    with ProgressBar():
+        results = delayed_obj.compute()
+
 
 # %% [markdown]
-# Load data: 
-#
+# ## If file createad already, skip to here
 
-# %% [markdown]
-# ds_mod = xr.open_dataset(fn_comb) 
-
-
-# %% [markdown]
-# ds_mod.compute()
-#
-# ds_mod.load()
-
-# %% [markdown]
-# Somehow unsorted
-
-# %% [markdown]
-# ds_mod = ds_mod.sortby('time')
-
-# %% [markdown]
-# ### Select hyytiala grid cell: 
+# %% [markdown] tags=[]
+# ### Select hyytiala grid cell:
 
 # %% [markdown]
 # We use only hyytiala for org etc, but all grid cells over finland for cloud properties
 
-# %% [markdown]
-# ds_mod['TOT_ICLD_VISTAU_s']= ds_mod['TOT_ICLD_VISTAU'].sum('lev')
-# ds_mod['TOT_CLD_VISTAU_s']= ds_mod['TOT_CLD_VISTAU'].sum('lev')
-#
+# %%
+if not fn_comb_lev1_final.exists():
+    ds_all = xr.open_dataset(fn_comb_lev1).isel(ilev=model_lev_i)
+    ds_sel = ds_all.sel(lat = lat_smr, lon= lon_smr, method='nearest')#.isel( ilev=model_lev_i)#.load()
+    ds_all = ds_all.isel(
+        #ilev=-1,
+        # cosp_tau_modis=0,
+        #                                                    cosp_tau=0,
+        #                                                   cosp_dbze=0,
+        #                                                    cosp_ht=0,
+        #                                                    cosp_prs = 0,
+        #                                                   cosp_reffice=0,
+        #                                                    cosp_htmisr=0,
+        #                                                    cosp_reffliq=0,
+        #                                                    cosp_scol=0,
+        #                                                    cosp_sr=0,
+        #                                                    cosp_sza=0,
+        nbnd=0
+    ).squeeze()
+    ds_all = broadcase_station_data(ds_all)
+    ds_all = change_units_and_compute_vars(ds_all, temperature=temperature)
 
-# %% [markdown]
-# model_lev_i=-1
-# ds_sel = ds_mod.sel(lat = lat_smr, lon= lon_smr, method='nearest').isel( lev=model_lev_i)#.load()
-# ds_all = ds_mod.isel(lev=model_lev_i)#.load()
-#
-# #ds_sel.load()
-# #ds_all.load()
 
-# %% [markdown]
-# ds_all.to_netcdf(fn_comb_lev1)
+    delayed_obj = ds_all.to_netcdf(fn_comb_lev1_final, compute=False)
+    print('hey')
+    with ProgressBar():
+        results = delayed_obj.compute()
+
+
+# %% [markdown] tags=[] jp-MarkdownHeadingCollapsed=true
+# ### Broadcast ds_sel to same grid
 
 # %%
-model_lev_i=-1
 
-# %%
-ds_all = xr.open_dataset(fn_comb_lev1).isel(ilev=model_lev_i, nbnd=0)
-ds_sel = ds_all.sel(lat = lat_smr, lon= lon_smr, method='nearest')#.isel( ilev=model_lev_i)#.load()
-
-
-# %%
-ds_mod = ds_all
-
-# %%
-ds_all['ACTNL'].isel(lat=0).plot()
-
-# %%
-dic_ds=dict()
-dic_ds[case_name]= ds_mod
-
-# %% [markdown]
-# ### Broadcast ds_sel to same grid 
-
-# %% [markdown]
-# Copying the same for as hyytiala for all grid cells for the station variables (st measurements) 
-
-# %%
-ds_all['ACTNL'].load().isel(time=20000).plot()
-
-# %%
-ds_all['SOA_NA'].load().isel(time=20000).plot()
-
-# %%
-ds_1, ds_2 =xr.broadcast(ds_sel, ds_all)
-for v in varl_st:
-    ds_all[v] = ds_1[v]
+ds_all = xr.open_dataset(fn_comb_lev1_final)
 
 
 # %%
-ds_sel
-
-# %% [markdown]
-# ### Set dic_ds : 
-
-# %%
+dic_ds = dict()
 dic_ds[case_name] =ds_all
 
-# %% [markdown]
-# Constants:
 
 # %%
-R = 287.058
-pressure = 1000. #hPa
-kg2ug = 1e9
+if not fn_comb_lev1_final_csv.exists():
+    dic_df = get_dic_df_mod(dic_ds, select_hours_clouds=True)
+
+    df_mod = dic_df[case_name]
+    df_mod.to_csv(fn_comb_lev1_final_csv)
 
 # %%
-ds_all.load()
-
-
-# %%
-def get_dic_df_mod(model_lev_i=-1):
-    
-
-
-    # %%
-    dic_df = dict()
-    dic_df_sm = dict()
-
-    for ca in dic_ds.keys():
-        ds = dic_ds[ca]
-        #ds['TOT_ICLD_VISTAU_s']= ds['TOT_ICLD_VISTAU'].sum('lev')
-        #ds['TOT_CLD_VISTAU_s']= ds['TOT_CLD_VISTAU'].sum('lev')
-        for v in ['TGCLDLWP','TGCLDIWP','TGCLDCWP']:
-            if v in ds.data_vars:
-                if ds[v].attrs['units'] =='kg/m2':
-                    ds[v] = ds[v]*1000
-                    ds[v].attrs['units'] = 'g/m2'
-                
-        
-        ds_sel = ds.sel(lat = lat_smr, lon= lon_smr, method='nearest')#.isel( lev=model_lev_i)
-
-
-# %%
-
-        # %%
-        ds_all = ds#.isel(lev=model_lev_i)
-        ds_sel =ds_sel[varl_st]
-       
-        s_1, ds_2 =xr.broadcast(ds_sel, ds_all)
-        for v in varl_st:
-            ds_all[v] = ds_1[v]
-        ds_sel = ds_all
-        rho = pressure*100/(R*ds_sel['T'])
-
-
-        # %%
-        ds_sel['rho'] = rho
-        ds_sel['ACTNL_incld'] = ds_sel['ACTNL']/ds_sel['FCTL']
-        ds_sel['ACTREL_incld'] = ds_sel['ACTREL']/ds_sel['FCTL']
-
-
-        # %%
-        ds_sel_median = ds_sel.resample({'time':'D'}).median()
-
-        # %%
-        ds_sel_median['ACTNL_incld'].plot()
-
-        # %%
-        #df = ds_sel_median.to_dataframe()
-
-
-        # %%
-        ls_so4 = [c for c in ds_sel_median.data_vars if 'SO4_' in c]#['SO4_NA']
-
-        # %%
-        ls_so4
-
-        # %%
-        for s in ['SOA_NA','SOA_A1','OM_AC','OM_AI','OM_NI']+ls_so4:
-            un = '$\micro$g/m3'
-            if ds_sel_median[s].attrs['units']!=un:
-                ds_sel_median[s] = ds_sel_median[s]*ds_sel_median['rho']*kg2ug
-                ds_sel_median[s].attrs['units']=un
-        #ds_sel_med= ds_sel_median.resample(time='D').median()
-
-
-        # %%
-        df = ds_sel_median.to_dataframe()
-        df = df.drop([co for co in df.columns if (('lat_' in co)|('lon_' in co))], 
-                     axis=1)
-
-        df['SOA'] = df['SOA_NA'] + df['SOA_A1']
-
-        df['OA']  = df['SOA_NA'] + df['SOA_A1'] + df['OM_AC'] + df['OM_AI'] + df['OM_NI']
-        df['POA'] = df['OM_AC']  + df['OM_AI' ] + df['OM_NI']
-    
-        df['SO4']=0
-        for s in ls_so4:
-            print(s)
-            
-            print(df[s].mean())
-            df['SO4'] = df['SO4'] + df[s]
-        
-        #df['ACTNL_incld'] = df['ACTNL']/df['FCTL']
-        #df['ACTREL_incld'] = df['ACTREL']/df['FCTL']
-        
-    
-        df_daily = df#.resample('D').median()
-
-        months = (df.index.get_level_values(0).month==7 )|(df.index.get_level_values(0).month==8  )
-
-        df_s = df_daily[months]
-        df_s.loc[:,'year'] = df_s.index.get_level_values(0).year.values
-
-        df_s.loc[:,'T_C'] = df_s['T'].values-273.15
-        #df_s.index = df_s.index.rename('date')
-        df_merge = df_s#pd.merge(df_s, df_hyy_1, right_on='date', left_on='date')
-        
-        df_merge['year'] = df_merge.index.get_level_values(0).year
-
-        
-        dic_df[ca] = df_merge
-        print(ca)
-    
-        months = (df.index.get_level_values(0).month==7 )|(df.index.get_level_values(0).month==8  )
-
-        df_s = df[months]
-        ds_month_mask = ds_sel.where((ds_sel['time.month']==7) | (ds_sel['time.month']==8))
-        ds_sel_med_y= ds_month_mask.resample(time='Y').median()
-        df_ym =ds_sel_med_y.to_dataframe()
-        #df_ym = df_s.resample('Y').median()
-        #df_ym.loc[:,'year'] = df_ym.index.year.values
-
-        df_ym.loc[:,'T_C'] = df_ym['T'].values-273.15
-        
-        dic_df_sm[ca] = df_merge
-        print(ca)
-
-
-    # %%
-    return dic_df_sm, dic_df
-
-
-dic_df_sm, dic_df = get_dic_df_mod(model_lev_i=-1)
-
-# %% tags=[]
-dic_df_sm[case_name].columns
-
-# %% tags=[]
-df_mod = dic_df_sm[case_name]
-
-
-# %%
-df_mod.index.get_level_values(1)
-
-# %%
-df_mod#.index.get_level_values(1)
-
-# %%
-mask_liq_cloudtop = df_mod['FCTL']>0.0001
-
-# %%
-df_mod['mask_liq_cloudtop'] = mask_liq_cloudtop
-
-# %% tags=[]
-sel_latlon = (df_mod.index.get_level_values(2)==27.5)&(df_mod.index.get_level_values(1)==61.57894736842104)
-
-df_mod[sel_latlon].reset_index().set_index('time')['TGCLDLWP'].plot()
-
-
-# %%
-df_mod[mask_liq_cloudtop].reset_index().set_index('time')['FCTL'].plot()#ylim=[-.0,.01])
-
-
-# %%
-df_mod[mask_liq_cloudtop].reset_index().set_index('time')['ACTNL_incld'].plot()#ylim=[-.0,.01])
-
+df_mod = pd.read_csv(fn_comb_lev1_final_csv, index_col=[0,1,2] )
 
 # %% [markdown]
-# #### Mask values that don't have cloud top liquid
+# ## Clean data:
+
+# %% [markdown]
+# ### Remove gridcells that don't have a lot of cloud?
+
+# %%
+df_mod = df_mod[df_mod['CLDFREE']<.5]#.index.get_level_values(1)
+
+# %% [markdown]
+# ### Remove grid vells with no cloud top liquid
+
+# %%
+mask_liq_cloudtop = df_mod['FCTL']>0.1
+
+df_mod.loc[:,'mask_liq_cloudtop'] = mask_liq_cloudtop
+
+# %%
+one_gc = (df_mod.index.get_level_values(1)==61.57894736842104) & (df_mod.index.get_level_values(2) ==30.0)
+
+_ma = mask_liq_cloudtop[one_gc]
+
+df_mod[one_gc][_ma].reset_index().set_index('time')['FCTL'].plot()#ylim=[-.0,.01])
+
 
 # %%
 df_mod = df_mod[df_mod['mask_liq_cloudtop']]
 
+# %% [markdown] tags=[]
+# ## Group by cloud water path
+
 # %%
-df_mod['CWP_qcut']=pd.qcut(df_mod['TGCLDLWP'],6)# bins=bins, labels=labels)§
+df_mod['CWP_qcut']=pd.qcut(df_mod['TGCLDCWP'],6)# bins=bins, labels=labels)§
 
 df_mod['CWP_qcutl'] = df_mod['CWP_qcut'].apply(lambda x:x.mid)
 
 
 
 # %%
-bins = pd.IntervalIndex.from_breaks([ 10,  30,  50,  70, 90, 110, 130,500])
+bins = pd.IntervalIndex.from_breaks([ 10,  40,  70,  100, 130, 160, 190,500])
 
 
-df_mod['CWP_cut']=pd.cut(df_mod['TGCLDLWP'], bins=bins)#, labels=labels)
+df_mod['CWP_cut']=pd.cut(df_mod['TGCLDCWP'], bins=bins)#, labels=labels)
 
 df_mod['CWP_cutl'] = df_mod['CWP_cut'].apply(lambda x:x.mid)
 
@@ -465,168 +396,767 @@ df_mod.loc[df_mod['OA_low'], 'OA_category'] = 'OA low'
 
 
 
-# %%
-df_mod[(df_mod.index.get_level_values('lat') >65)& (df_mod.index.get_level_values('lon') == 25.0)]
+# %% [markdown]
+# ## Distribution plots:
 
 # %%
-import seaborn as sns
+palette = 'Set2'
 
 # %%
-df_mod['ACTREL_incld'].plot.hist()
+import numpy as np
 
 # %%
-df_mod = df_mod[((df_mod['OA_category'].notna()) & (df_mod['TOT_ICLD_VISTAU_s']>2))& (df_mod['ACTREL_incld']>2)]
+import matplotlib.cm as cm
+from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
 
 # %%
-_df = (df_mod[((df_mod['OA_category'].notna()) & (df_mod['TOT_ICLD_VISTAU_s']>2))& (df_mod['ACTREL_incld']>2)])
-_df = _df[_df['TOT_ICLD_VISTAU_s']<50]
-sns.displot(#x='TGCLDLWP', 
-            x='TOT_ICLD_VISTAU_s',
+#cmap = cm.get_cmap(name=palette, )
+cmap_list = ['#441FE0','#BBE01F'][::-1]#cmap(a) for a in np.linspace(0,1,8)]
+
+# %%
+palette_OA = cmap_list[0:2]
+
+
+# %%
+fig, axs = plt.subplots(2,1, sharex=True, figsize =[6,6])
+v_x = 'COT'
+x_cut = 100
+v_hue = 'OA_category'
+hue_order=['OA low', 'OA high'][::-1]
+
+_palette = palette_OA#cmap_list[0:2]
+
+
+_df = df_hyy_1
+_df = _df[_df[v_x]<x_cut]
+
+ax = axs[0]
+sns.histplot(#x='TGCLDLWP', 
+            x=v_x,
+            data=_df,
+            hue=v_hue,
+    hue_order=hue_order,
+    palette=_palette,
+    legend=False,
+    edgecolor='w',
+    
+    ax = ax
+           )
+#plt.ylim([0,250])
+print(len(_df))
+ax.set_title('Observations')
+
+
+v_x = 'TOT_ICLD_VISTAU_s'
+ax = axs[1]
+
+_df = (df_mod[(df_mod['OA_category'].notna())])
+_df = _df[_df[v_x]<x_cut]
+sns.histplot(#x='TGCLDLWP', 
+            x=v_x,
+            data=_df,
+            hue=v_hue,
+    hue_order=hue_order,
+    ax = ax,
+    legend=False,
+    
+    palette = _palette,
+    edgecolor='w',
+    
+           #kind='swarm'
+           )
+ax.set_title('OsloAero')
+
+custom_lines = [Line2D([0], [0], color=cmap_list[0], lw=4),
+                Line2D([0], [0], color=cmap_list[1], lw=4),
+               # Line2D([0], [0], color=cmap(1.), lw=4)
+            
+               ]
+
+leg_els = [
+
+    Patch(edgecolor='w',alpha = .5, facecolor=_palette[1], label='OA low'),
+    Patch(edgecolor=None, alpha = .5,facecolor=_palette[0], label='OA high'),
+
+]
+
+ax.legend(handles = leg_els, frameon=False)
+ax.set_xlabel('Cloud optical thickness')
+#plt.ylim([0,250])
+print(len(_df))
+sns.despine(fig)
+
+fn = make_fn(case_name, v_x,'obs',comment='distribution')
+
+fig.savefig(fn, dpi=150)
+
+
+
+# %%
+fig, axs = plt.subplots(2,1, sharex=True, figsize =[6,6])
+v_x = 'CWP (g m^-2)'
+x_cut = 10e10
+v_hue = 'OA_category'
+hue_order=['OA low', 'OA high'][::-1]
+
+_palette = palette_OA#cmap_list[0:2]
+
+
+_df = df_hyy_1
+_df = _df[_df[v_x]<x_cut]
+
+ax = axs[0]
+sns.histplot(
+    x=v_x,
+    data=_df,
+    hue=v_hue,
+    hue_order=hue_order,
+    palette=_palette,
+    legend=False,
+    edgecolor='w',
+    ax = ax
+)
+print(len(_df))
+ax.set_title('Observations')
+
+
+v_x = 'TGCLDCWP_incld'
+ax = axs[1]
+
+_df = (df_mod[(df_mod['OA_category'].notna())])
+_df = _df[_df[v_x]<x_cut]
+sns.histplot(
+    x=v_x,
+    data=_df,
+    hue=v_hue,
+    hue_order=hue_order,
+    ax = ax,
+    legend=False,
+    palette = _palette,
+    edgecolor='w',
+)
+
+ax.set_title('OsloAero')
+
+custom_lines = [Line2D([0], [0], color=cmap_list[0], lw=4),
+                Line2D([0], [0], color=cmap_list[1], lw=4),
+               # Line2D([0], [0], color=cmap(1.), lw=4)
+            
+               ]
+
+leg_els = [
+
+    Patch(edgecolor='w',alpha = .5, facecolor=_palette[1], label='OA low'),
+    Patch(edgecolor=None, alpha = .5,facecolor=_palette[0], label='OA high'),
+
+]
+
+ax.legend(handles = leg_els, frameon=False)
+ax.set_xlabel('CWP (g m^-2)')
+#plt.ylim([0,250])
+print(len(_df))
+sns.despine(fig)
+
+fn = make_fn(case_name, v_x,'obs',comment='distribution')
+
+fig.savefig(fn, dpi=150)
+
+
+
+# %%
+fig, axs = plt.subplots(2,1, sharex=True, figsize =[6,6])
+v_x = 'CWP (g m^-2)'
+x_cut = 10e10
+v_hue = 'OA_category'
+hue_order=['OA low', 'OA high'][::-1]
+
+_palette = palette_OA#cmap_list[0:2]
+
+
+_df = df_hyy_1
+_df = _df[_df[v_x]<x_cut]
+
+ax = axs[0]
+sns.histplot(
+    x=v_x,
+    data=_df,
+    hue=v_hue,
+    hue_order=hue_order,
+    palette=_palette,
+    legend=False,
+    edgecolor='w',
+    ax = ax
+)
+print(len(_df))
+ax.set_title('Observations')
+
+
+v_x = 'TGCLDCWP_incld'
+ax = axs[1]
+
+_df = (df_mod[(df_mod['OA_category'].notna())])
+_df = _df[_df[v_x]<x_cut]
+sns.histplot(
+    x=v_x,
+    data=_df,
+    hue=v_hue,
+    hue_order=hue_order,
+    ax = ax,
+    legend=False,
+    palette = _palette,
+    edgecolor='w',
+)
+
+ax.set_title('OsloAero')
+
+custom_lines = [Line2D([0], [0], color=cmap_list[0], lw=4),
+                Line2D([0], [0], color=cmap_list[1], lw=4),
+               # Line2D([0], [0], color=cmap(1.), lw=4)
+            
+               ]
+
+leg_els = [
+
+    Patch(edgecolor='w',alpha = .5, facecolor=_palette[1], label='OA low'),
+    Patch(edgecolor=None, alpha = .5,facecolor=_palette[0], label='OA high'),
+
+]
+
+ax.legend(handles = leg_els, frameon=False)
+ax.set_xlabel('CWP (g m^-2)')
+#plt.ylim([0,250])
+print(len(_df))
+sns.despine(fig)
+
+fn = make_fn(case_name, v_x,'obs',comment='distribution')
+
+fig.savefig(fn, dpi=150)
+
+
+
+# %% [markdown]
+# ### Fractional occurance of cloud top liquid
+
+# %%
+_df = df_mod#[(df_mod['OA_category'].notna()) & (df_mod['TOT_ICLD_VISTAU_s']>1)])
+_df = _df#[_df['TGCLDCWP']<700]
+sns.displot(#x='TGCLDLWP',
+            x='FCTL',
             data=_df,
             hue='OA_category',
+    palette=palette_OA,
            #kind='swarm'
            )
 #plt.ylim([0,250])
-print(len(_df['OA_category']))
+print(len(df_mod[df_mod['OA_category'].notna()]))
+
+# %% [markdown]
+# ### Take only points where 30% of cloud top is liquid
 
 # %%
-sns.displot(#x='TGCLDLWP', 
-            x='ACTNL_incld',
-            data=df_mod[~df_mod['OA_mid_range']].reset_index(),
-            hue='OA_category',
-           #kind='swarm'
-           )
-#plt.ylim([0,250])
+_df = df_mod 
+_df = _df[_df['FCTL']>.3]
+sns.displot(
+    x='TGCLDCWP_incld',
+    data=_df,
+    hue='OA_category',
+    palette=palette_OA,    
+)
+print(len(df_mod[df_mod['OA_category'].notna()]))
 
 # %%
-import seaborn as sns
+sns.displot(
+    x='ACTNL_incld',
+    data=df_mod[~df_mod['OA_mid_range']].reset_index(),
+    hue='OA_category',
+    palette=palette_OA,
+)
+print(len(df_mod[~df_mod['OA_mid_range']]))
+
+# %% [markdown]
+# ## Cloud optical thickness
+
+# %% [markdown]
+# ### Incloud
 
 # %%
-sns.catplot(x='CWP_cutl', 
-            y='ACTNL_incld',
-            #data=df_mod.reset_index(),
-            #data=df_mod[~df_mod['OA_mid_range']].reset_index(),
-            data=df_mod[df_mod['OA_category'].notna()].reset_index(),
-            hue_order=['OA low','OA high'],
-
-            hue='OA_category',
-           kind='swarm'
-           )
-#plt.ylim([0,250])
+hue_order = ['OA low','OA high']
+palette_OA_2 = palette_OA[::-1]
 
 # %%
-sns.catplot(x='CWP_cutl', 
-            y='ACTNL_incld',
-            #data=df_mod.reset_index(),
-            #data=df_mod[~df_mod['OA_mid_range']].reset_index(),
-            data=df_mod[df_mod['OA_category'].notna()].reset_index(),
-            hue_order=['OA low','OA high'],
+x_mod = 'CWP_cutl'
+x_obs = 'CWP_cutl'
+y_mod = 'TOT_ICLD_VISTAU_s'
+y_obs = 'COT'
+ylim = [0,52]
+figsize = [12,10]
+figsize = [11,7]
+_palette = palette_OA_2
 
-            hue='OA_category',
-           kind='boxen'
-           )
-#plt.ylim([0,250])
+#fig, axs = plt.subplots(2,2,figsize=figsize, sharey=True, sharex=True)
+fig, axs = plt.subplots(2,2,figsize=figsize, sharey=True, sharex='col')
 
-# %%
-sns.catplot(x='CWP_cutl', 
-            y='TOT_ICLD_VISTAU_s',
-            data=df_mod[df_mod['OA_category'].notna()].reset_index(),
-            hue_order=['OA low','OA high'],
+markersize= 2
 
-            hue='OA_category',
-            kind='boxen',
-           )
-#plt.ylim([0,250])
+_df_obs = df_hyy_1#df_mod[df_mod['OA_category'].notna()].reset_index()
+_df_obs_lim =_df_obs[(_df_obs[y_obs]<=ylim[1])& (_df_obs[y_obs]>=ylim[0])] 
 
-# %%
-sns.catplot(x='CWP_cutl', 
-            y='TOT_ICLD_VISTAU_s',
-            #data=df_mod.reset_index(),
-            data=df_mod[df_mod['OA_category'].notna()].reset_index(),
-            hue_order=['OA low','OA high'],
 
-            hue='OA_category',
-           kind='swarm'
-           )
-#plt.ylim([0,250])
+ax = axs[0,1]
+sns.swarmplot(
+    x=x_obs,
+    y=y_obs,
+    data=_df_obs_lim,
+    hue_order=hue_order,
+    hue='OA_category',
+    palette=_palette,
+    size = markersize,
+    ax = ax,
+)
 
-# %%
-sns.catplot(x='CWP_cutl', 
-            y='TOT_CLD_VISTAU_s',
-            data=df_mod[df_mod['OA_category'].notna()].reset_index(),
-            hue ='OA_category',
-            kind='boxen',
-            hue_order=['OA low','OA high'],
-           )
-#plt.ylim([0,250])
 
-# %%
-sns.catplot(x='CWP_cutl', 
-            y='TOT_CLD_VISTAU_s',
-            data=df_mod[df_mod['OA_category'].notna()].reset_index(),
-            hue ='OA_category',
-            kind='swarm',
-            hue_order=['OA low','OA high'],
-           )
-#plt.ylim([0,250])
-
-# %%
-sns.catplot(x='CWP_cutl', 
-            y='ACTNL_incld',
-            data=df_mod[df_mod['OA_category'].notna()].reset_index(),
-
-            hue='OA_category',
-           kind='swarm'
+ax = axs[1,1]
+sns.boxenplot(
+    x=x_obs,
+    y=y_obs,
+    data= _df_obs,
+    hue_order=hue_order,#['OA low','OA high'],
+    hue='OA_category',
+    #kind='boxen',
+    ax = ax,
+    palette=_palette,
            )
 
-# %%
-sns.catplot(x='CWP_cutl', 
-            y='ACTNL_incld',
-            data=df_mod[df_mod['OA_category'].notna()].reset_index(),
 
-            hue='OA_category',
-            kind='violin'
+## PLOT MODEL
+
+
+
+_df_mod = df_mod[df_mod['OA_category'].notna()].reset_index()
+_df_mod_lim =_df_mod[(_df_mod[y_mod]<=ylim[1])& (_df_mod[y_mod]>=ylim[0])] 
+
+markersize=3
+ax = axs[0,0]
+sns.swarmplot(
+    x=x_mod,
+    y=y_mod,
+    data=_df_mod_lim,
+    hue_order=hue_order,
+    
+    hue='OA_category',
+    palette=_palette,
+    ax = ax,
+    size = markersize,
+)
+
+
+ax = axs[1,0]
+sns.boxenplot(
+    x=x_mod,
+    y=y_mod,
+    data=_df_mod,
+    hue_order=hue_order,
+    
+    ax = ax,
+    hue='OA_category',
+    palette=_palette,
+)
+
+
+## ADJUSTMENTS
+
+leg_els = [
+    Patch(edgecolor='k', alpha = .9,facecolor=_palette[0], label='OA low'),
+    Patch(edgecolor='k',alpha = .9, facecolor=_palette[1], label='OA high'),
+          ]
+axs[1,0].legend(handles = leg_els, frameon=False)
+
+leg_els = [
+     Line2D([0], [0], marker='o', color='w',
+                          markerfacecolor=_palette[0], markersize=10,
+            label='OA low'
+           ),
+         Line2D([0], [0], marker='o', color='w', 
+                          markerfacecolor=_palette[1], markersize=10,
+            label='OA high'
+           ),
+          ]
+axs[0,0].legend(handles = leg_els, frameon=False)
+
+
+for ax in axs[:,1]:
+    ax.legend([],[], frameon=False)
+    ax.set_ylabel(None)
+for ax in axs[:,0]:
+    ax.set_ylabel('Cloud optical depth []')
+for ax in axs[1,:]:
+    ax.set_xlabel('CWP [g m$^{-2}$]')
+for ax in axs[0,:]:
+    ax.set_xlabel(None)
+
+for ax in axs.flatten():
+
+    ax.set_ylim(ylim)
+
+    
+axs[0,0].set_title('OsloAero')
+axs[0,1].set_title('Observations')
+
+sns.despine(fig)
+
+fn = make_fn(case_name, x_mod,y_mod, comment='binned_by_x')
+fig.savefig(fn, dpi=150)
+plt.show()
+
+### Grid box avg
+
+
+# %%
+x_mod = 'CWP_cutl'
+x_obs = 'CWP_cutl'
+y_mod = 'TOT_CLD_VISTAU_s'
+y_obs = 'COT'
+ylim = [0,52]
+figsize = [12,10]
+figsize = [11,7]
+
+_palette = palette_OA_2
+
+fig, axs = plt.subplots(2,2,figsize=figsize, sharey=True, sharex='col')
+
+
+markersize= 2
+
+_df_obs = df_hyy_1#df_mod[df_mod['OA_category'].notna()].reset_index()
+_df_obs_lim =_df_obs[(_df_obs[y_obs]<=ylim[1])& (_df_obs[y_obs]>=ylim[0])] 
+
+
+ax = axs[0,1]
+sns.swarmplot(
+    x=x_obs,
+    y=y_obs,
+    data=_df_obs_lim,
+    hue_order=['OA low','OA high'],
+    hue='OA_category',
+    palette=_palette,
+    size = markersize,
+    ax = ax,
+)
+
+
+ax = axs[1,1]
+sns.boxenplot(
+    x=x_obs,
+    y=y_obs,
+    data= _df_obs,
+    hue_order=['OA low','OA high'],
+    hue='OA_category',
+    #kind='boxen',
+    ax = ax,
+    palette=_palette,
            )
 
-# %%
-sns.catplot(x='CWP_cutl', 
-            y='ACTREL_incld',
-            data=df_mod[df_mod['OA_category'].notna()].reset_index(),
-            hue_order=['OA low','OA high'],
 
-            hue='OA_category',
-            kind='boxen',
+## PLOT MODEL
+
+
+
+_df_mod = df_mod[df_mod['OA_category'].notna()].reset_index()
+_df_mod_lim =_df_mod[(_df_mod[y_mod]<=ylim[1])& (_df_mod[y_mod]>=ylim[0])] 
+
+markersize=3
+ax = axs[0,0]
+sns.swarmplot(
+    x=x_mod,
+    y=y_mod,
+    data=_df_mod_lim,
+    hue_order=['OA low','OA high'],
+    hue='OA_category',
+    palette=_palette,
+    ax = ax,
+    size = markersize,
+)
+
+
+ax = axs[1,0]
+sns.boxenplot(
+    x=x_mod,
+    y=y_mod,
+    data=_df_mod,
+    hue_order=['OA low','OA high'],
+    ax = ax,
+    hue='OA_category',
+    palette=_palette,
+)
+
+
+## ADJUSTMENTS
+
+leg_els = [
+    Patch(edgecolor='k', alpha = .9,facecolor=_palette[0], label='OA low'),
+    Patch(edgecolor='k',alpha = .9, facecolor=_palette[1], label='OA high'),
+          ]
+axs[1,0].legend(handles = leg_els, frameon=False)
+
+leg_els = [
+     Line2D([0], [0], marker='o', color='w',
+                          markerfacecolor=_palette[0], markersize=10,
+            label='OA low'
+           ),
+         Line2D([0], [0], marker='o', color='w', 
+                          markerfacecolor=_palette[1], markersize=10,
+            label='OA high'
+           ),
+          ]
+axs[0,0].legend(handles = leg_els, frameon=False)
+
+
+for ax in axs[:,1]:
+    ax.legend([],[], frameon=False)
+    ax.set_ylabel(None)
+for ax in axs[:,0]:
+    ax.set_ylabel('Cloud optical depth []')
+for ax in axs[1,:]:
+    ax.set_xlabel('CWP [g m$^{-2}$]')
+for ax in axs[0,:]:
+    ax.set_xlabel(None)
+
+for ax in axs.flatten():
+
+    ax.set_ylim(ylim)
+
+axs[0,0].set_title('OsloAero')
+axs[0,1].set_title('Observations')
+
+
+sns.despine(fig)
+
+fn = make_fn(case_name, x_mod,y_mod, comment='binned_by_x')
+fig.savefig(fn, dpi=150)
+plt.show()
+
+### Grid box avg
+
+
+# %%
+x_mod = 'CWP_cutl'
+x_obs = 'CWP_cutl'
+y_mod = 'ACTREL_incld'
+y_obs = 'CER (micrometer)'
+ylim = [3,25]
+figsize = [11,7]
+_palette = palette_OA_2
+fig, axs = plt.subplots(2,2,figsize=figsize, sharey=True, sharex='col')
+
+markersize= 2
+
+_df_obs = df_hyy_1#df_mod[df_mod['OA_category'].notna()].reset_index()
+_df_obs_lim =_df_obs[(_df_obs[y_obs]<=ylim[1])& (_df_obs[y_obs]>=ylim[0])] 
+
+
+
+
+_df_mod = df_mod[df_mod['OA_category'].notna()].reset_index()
+_df_mod_lim =_df_mod[(_df_mod[y_mod]<=ylim[1])& (_df_mod[y_mod]>=ylim[0])] 
+
+
+
+# OBSERVATIONS PLOT
+
+ax = axs[0,1]
+sns.swarmplot(
+    x=x_obs,
+    y=y_obs,
+    data=_df_obs_lim,
+    hue_order=['OA low','OA high'],
+    hue='OA_category',
+    palette=_palette,
+    size = markersize,
+    ax = ax,
+)
+
+
+ax = axs[1,1]
+sns.boxenplot(
+    x=x_obs,
+    y=y_obs,
+    data= _df_obs,
+    hue_order=['OA low','OA high'],
+    hue='OA_category',
+    #kind='boxen',
+    ax = ax,
+    palette=_palette,
            )
-plt.ylim([0,25])
+
+
+## PLOT MODEL
+
+markersize=3
+ax = axs[0,0]
+sns.swarmplot(
+    x=x_mod,
+    y=y_mod,
+    data=_df_mod_lim,
+    hue_order=['OA low','OA high'],
+    hue='OA_category',
+    palette=_palette,
+    ax = ax,
+    size = markersize,
+)
+
+
+ax = axs[1,0]
+sns.boxenplot(
+    x=x_mod,
+    y=y_mod,
+    data=_df_mod,
+    hue_order=['OA low','OA high'],
+    ax = ax,
+    hue='OA_category',
+    palette=_palette,
+)
+
+
+## ADJUSTMENTS
+
+leg_els = [
+    Patch(edgecolor='k', alpha = .9,facecolor=_palette[0], label='OA low'),
+    Patch(edgecolor='k',alpha = .9, facecolor=_palette[1], label='OA high'),
+          ]
+axs[1,0].legend(handles = leg_els, frameon=False)
+
+leg_els = [
+     Line2D([0], [0], marker='o', color='w',
+                          markerfacecolor=_palette[0], markersize=10,
+            label='OA low'
+           ),
+         Line2D([0], [0], marker='o', color='w', 
+                          markerfacecolor=_palette[1], markersize=10,
+            label='OA high'
+           ),
+          ]
+axs[0,0].legend(handles = leg_els, frameon=False)
+
+
+for ax in axs[:,1]:
+    ax.legend([],[], frameon=False)
+    ax.set_ylabel(None)
+for ax in axs[:,0]:
+    ax.set_ylabel('Cloud effective radius [$\mu m$]')
+for ax in axs[1,:]:
+    ax.set_xlabel('CWP [g m$^{-2}$]')
+for ax in axs[0,:]:
+    ax.set_xlabel(None)
+
+for ax in axs.flatten():
+
+    ax.set_ylim(ylim)
+
+    
+axs[0,0].set_title('OsloAero')
+axs[0,1].set_title('Observations')
+
+sns.despine(fig)
+
+fn = make_fn(case_name, x_mod,y_mod, comment='binned_by_x')
+fig.savefig(fn, dpi=150)
+plt.show()
+
+### Grid box avg
+
 
 # %%
-sns.catplot(x='CWP_cutl', 
-            y='ACTREL_incld',
-            data=df_mod[df_mod['OA_category'].notna()].reset_index(),
-            hue_order=['OA low','OA high'],
+x_mod = 'CWP_cutl'
+y_mod = 'ACTNL_incld'
+ylim = [0,150]
+figsize = [9,7]
+_palette = palette_OA_2
 
-            hue='OA_category',
-            kind='swarm',
-           )
-plt.ylim([0,25])
+fig, axs = plt.subplots(2,1,figsize=figsize, sharey=True, sharex='col')
 
-# %%
-sns.catplot(x='CWP_cutl', 
-            y='ACTREL_incld',
-            data=df_mod[df_mod['OA_category'].notna()].reset_index(),
-            hue ='OA_category',
-            kind='swarm',
-            hue_order=['OA low','OA high'],
-           )
-#plt.ylim([0,250])
-plt.ylim([0,25])
+markersize= 2
 
-# %%
+_df_obs = df_hyy_1
+_df_obs_lim =_df_obs[(_df_obs[y_obs]<=ylim[1])& (_df_obs[y_obs]>=ylim[0])] 
 
-# %%
+_df_mod = df_mod[df_mod['OA_category'].notna()].reset_index()
+_df_mod_lim =_df_mod[(_df_mod[y_mod]<=ylim[1])& (_df_mod[y_mod]>=ylim[0])] 
 
-# %%
 
-# %%
 
-# %%
+## PLOT MODEL
+
+markersize=3
+ax = axs[0]
+sns.swarmplot(
+    x=x_mod,
+    y=y_mod,
+    data=_df_mod_lim,
+    hue_order=['OA low','OA high'],
+    hue='OA_category',
+    palette=_palette,
+    ax = ax,
+    size = markersize,
+)
+
+
+ax = axs[1]
+sns.boxenplot(
+    x=x_mod,
+    y=y_mod,
+    data=_df_mod,
+    hue_order=['OA low','OA high'],
+    ax = ax,
+    hue='OA_category',
+    palette=_palette,
+)
+
+
+## ADJUSTMENTS
+
+leg_els = [
+    Patch(edgecolor='k', alpha = .9,facecolor=_palette[0], label='OA low'),
+    Patch(edgecolor='k',alpha = .9, facecolor=_palette[1], label='OA high'),
+          ]
+axs[1].legend(handles = leg_els, frameon=False)
+
+leg_els = [
+     Line2D([0], [0], marker='o', color='w',
+                          markerfacecolor=_palette[0], markersize=10,
+            label='OA low'
+           ),
+         Line2D([0], [0], marker='o', color='w', 
+                          markerfacecolor=_palette[1], markersize=10,
+            label='OA high'
+           ),
+          ]
+axs[0].legend(handles = leg_els, frameon=False)
+
+
+#for ax in axs[:,1]:
+#    ax.legend([],[], frameon=False)
+#    ax.set_ylabel(None)
+for ax in axs:
+    ax.set_ylabel(r'Cloud droplet number conc. [cm$^{-3}$]')
+for ax in axs:
+    ax.set_xlabel('CWP [g m$^{-2}$]')
+for ax in axs[:-1]:
+    ax.set_xlabel(None)
+
+for ax in axs.flatten():
+
+    ax.set_ylim(ylim)
+
+axs[0].set_title('OsloAero')
+axs[1].set_title('Observations')
+    
+
+sns.despine(fig)
+
+fn = make_fn(case_name, x_mod,y_mod, comment='binned_by_x')
+fig.savefig(fn, dpi=150)
+plt.show()
+
+### Grid box avg
+

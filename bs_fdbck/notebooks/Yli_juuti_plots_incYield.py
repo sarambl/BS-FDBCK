@@ -75,10 +75,10 @@ import pandas as pd
 
 
 # %%
-from bs_fdbck.constants import measurements_path
+from bs_fdbck.constants import path_measurement_data
 
 # %%
-fn = measurements_path /'SourceData_Yli_Juuti2021.xls'
+fn = path_measurement_data / 'SourceData_Yli_Juuti2021.xls'
 
 df_hyy_1 = pd.read_excel(fn, sheet_name=0, header=2, usecols=range(6))
 
@@ -104,7 +104,7 @@ df_ebas_Nx, ds_ebas_Nx = get_ebas_dataset_Nx_daily_JA_median_df()
 #
 
 # %%
-fn = measurements_path /'SourceData_Yli_Juuti2021.xls'
+fn = path_measurement_data / 'SourceData_Yli_Juuti2021.xls'
 
 df_hyy_1y = pd.read_excel(fn, sheet_name=0, header=2, usecols=range(7,12),nrows=7)
 

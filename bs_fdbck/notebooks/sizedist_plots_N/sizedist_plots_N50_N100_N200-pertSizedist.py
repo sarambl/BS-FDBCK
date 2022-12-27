@@ -17,40 +17,31 @@
 # # Nx versus T and OA
 
 # %%
+# %load_ext autoreload
+
+# %autoreload 2
+
+
+# %%
 from pathlib import Path
-import seaborn as sns
-import matplotlib.pyplot as plt
-import pandas as pd
+
+from bs_fdbck.util.BSOA_datamanip import ds2df_inc_preprocessing
 from bs_fdbck.util.collocate.collocateLONLAToutput import CollocateLONLATout
 import useful_scit.util.log as log
+
+from bs_fdbck.util.plot.BSOA_plots import make_cool_grid, plot_scatter
+
 log.ger.setLevel(log.log.INFO)
 import time
-
-import seaborn as sns
+import xarray as xr
 import matplotlib.pyplot as plt
 
 # %%
-import numpy as np
 
 # %%
 
 import numpy as np
-from matplotlib import cm
 
-from sklearn.linear_model import LinearRegression, BayesianRidge
-from matplotlib.colors import ListedColormap, LinearSegmentedColormap
-cols = [
-    #'#ffff33',
-    '#0074c3',
-    '#eb4600',
-    '#f8ae00',
-    '#892893',
-    '#66ae00',
-    '#00c1f3',
-    '#b00029',
-]
-
-my_cmap = ListedColormap(cols)
 
 
 # %%
@@ -61,7 +52,7 @@ plot_path = Path('Plots')
 def make_fn_scat(case, v_x, v_y):
     _x = v_x.split('(')[0]
     _y = v_y.split('(')[0]
-    f = f'scat_{case}_{_x}_{_y}.png'
+    f = f'scat_pertSize_{case}_{_x}_{_y}.png'
     return plot_path /f
 
 
@@ -76,10 +67,10 @@ import pandas as pd
 
 
 # %%
-from bs_fdbck.constants import measurements_path
+from bs_fdbck.constants import path_measurement_data
 
 # %%
-fn = measurements_path /'SourceData_Yli_Juuti2021.xls'
+fn = path_measurement_data / 'SourceData_Yli_Juuti2021.xls'
 
 df_hyy_1 = pd.read_excel(fn, sheet_name=0, header=2, usecols=range(6))
 
@@ -90,8 +81,9 @@ df_hyy_1['date'] = df_hyy_1.apply(lambda x: f'{x.year:.0f}-{x.month:02.0f}-{x.da
 df_hyy_1['date'] = pd.to_datetime(df_hyy_1['date'] )
 
 
+
 # %%
-from bs_fdbck.util.EBAS_data import get_ebas_dataset_with_Nx, get_ebas_dataset_Nx_daily_JA_median_df
+from bs_fdbck.util.EBAS_data import get_ebas_dataset_Nx_daily_JA_median_df
 
 
 
@@ -99,13 +91,8 @@ from bs_fdbck.util.EBAS_data import get_ebas_dataset_with_Nx, get_ebas_dataset_N
 
 df_ebas_Nx, ds_ebas_Nx = get_ebas_dataset_Nx_daily_JA_median_df()
 
-
-# %% [markdown]
-# ### Yearly medians:
-#
-
 # %%
-fn = measurements_path /'SourceData_Yli_Juuti2021.xls'
+fn = path_measurement_data / 'SourceData_Yli_Juuti2021.xls'
 
 df_hyy_1y = pd.read_excel(fn, sheet_name=0, header=2, usecols=range(7,12),nrows=7)
 
@@ -133,6 +120,9 @@ df_hyy_1['date'] = pd.to_datetime(df_hyy_1['date'] )
 df_hyy_1 = df_hyy_1.set_index('date')
 
 # %%
+df_hyy_1.index = df_hyy_1.index.rename('time')
+
+# %%
 df_hyy_1['N100 (cm^-3)'].plot.hist(bins=50, alpha=0.4, label='obs')
 
 plt.show()
@@ -140,15 +130,19 @@ plt.show()
 
 
 # %% [markdown] tags=[]
-# ## Why is my method 20% off their method? Is it integration?
+# ## Why is my method 16% off their method? Is it integration?
 
 # %%
 
-df_joint_hyy = pd.merge(df_ebas_Nx, df_hyy_1, left_index=True, right_index=True)# right_on='date', left_on='time')
-(1.2**(-1)*df_joint_hyy['N100']).loc['2014-07':'2014-09'].plot(label='mine')
+df_joint_hyy = pd.merge(df_ebas_Nx, df_hyy_1, left_index=True, right_index=True)
+(df_joint_hyy['N100']).loc['2014-07':'2014-09'].plot(label='mine')
 (df_joint_hyy['N100 (cm^-3)']).loc['2014-07':'2014-09'].plot(label='orig')
 plt.legend()
 plt.show()
+
+
+
+print(df_joint_hyy['N100'][df_joint_hyy['N100 (cm^-3)'].notnull()].mean()/df_joint_hyy['N100 (cm^-3)'].mean())
 # %% [markdown]
 # # Read in model data:
 
@@ -165,14 +159,13 @@ history_field='.h1.'
 from_t = '2012-01-01'
 to_t = '2015-01-01'
 
-# %% [markdown]
+# %% [markdown] tags=[]
 # ## Cases:
 
 # %%
-cases_inc_Y = ['OsloAero_intBVOC_f19_f19_mg17_incY_full']#'SECTv21_ctrl_def','SECTv11_noresm2_ctrl', 'SECTv11_ctrl_fbvoc','SECTv11_noresm2_adj','SECTv11_noresm2_eq18']#'SECTv11_noresm2_NFHIST']#'SECTv11_ctrl_fbvoc']#'SECTv11_ctrl']#,'SECTv11_ctrl_fbvoc']#'SECTv11_ctrl']
-cases_orig = ['OsloAero_intBVOC_f19_f19_mg17_full']#, 'noSECTv21_ox_ricc']#'noSECTv11_noresm2_ricc', 'noSECTv11_noresm2_ctrl', 'noSECTv11_ctrl_fbvoc','noSECTv11_ctrl']#'noSECTv11_noresm2_NFHIST']#'noSECTv11_ctrl_fbvoc'] #/no SECTv11_ctrl
 cases_inc_Y = ['OsloAero_intBVOC_pertSizeDist_f19_f19_mg17_full']#'SECTv21_ctrl_def','SECTv11_noresm2_ctrl', 'SECTv11_ctrl_fbvoc','SECTv11_noresm2_adj','SECTv11_noresm2_eq18']#'SECTv11_noresm2_NFHIST']#'SECTv11_ctrl_fbvoc']#'SECTv11_ctrl']#,'SECTv11_ctrl_fbvoc']#'SECTv11_ctrl']
 cases_orig = ['OsloAero_intBVOC_f19_f19_mg17_full']#, 'noSECTv21_ox_ricc']#'noSECTv11_noresm2_ricc', 'noSECTv11_noresm2_ctrl', 'noSECTv11_ctrl_fbvoc','noSECTv11_ctrl']#'noSECTv11_noresm2_NFHIST']#'noSECTv11_ctrl_fbvoc'] #/no SECTv11_ctrl
+
 # %%
 case_mod = cases_orig[0]
 
@@ -195,10 +188,9 @@ varl =['N100','SOA_NA','SOA_A1','SO4_NA','DOD500','DOD440','ACTREL',#'TGCLDLWP',
        'monoterp','GS_SO2', 'GS_H2SO4','GS_monoterp','GS_isoprene']
 
 
-varl =['DOD500','DOD440','ACTREL',#,'SOA_A1',
+varl =['N100','DOD500','DOD440','ACTREL',#,'SOA_A1',
        'H2SO4','SOA_LV','COAGNUCL','FORMRATE','T',
-       'NCONC01',
-       'N50','N100','N150','N200',
+       'NCONC01','N50','N150','N200',
       
       'SOA_NA','SOA_A1','OM_NI','OM_AI','OM_AC','SO4_NA','SO4_A1','SO4_A2','SO4_AC','SO4_PR',
       'BC_N','BC_AX','BC_NI','BC_A','BC_AI','BC_AC','SS_A1','SS_A2','SS_A3','DST_A2','DST_A3', 
@@ -249,7 +241,9 @@ for ca in cases_orig + cases_inc_Y:
         ds = ds.rename({'location':'station'})
     dic_ds[ca]=ds
 
-# %% [markdown]
+for ca in cases_orig + cases_inc_Y:
+    dic_ds[ca] = dic_ds[ca].sel(station='SMR')
+# %% [markdown] tags=[]
 # # Functions:
 
 # %%
@@ -259,537 +253,95 @@ kg2ug = 1e9
 
 
 # %%
-
-def get_dic_df_mod(model_lev_i=-1):
-    dic_df = dict()
-    dic_df_sm = dict()
-
-    for ca in dic_ds.keys():
-        ds = dic_ds[ca]
-        ds_sel = ds.sel(station='SMR').isel( lev=model_lev_i)
-        rho = pressure*100/(R*ds_sel['T'])
-    
-        ds_sel['rho'] = rho.load()
-        df = ds_sel.to_dataframe()
-        ls_so4 = [c for c in df.columns if 'SO4_' in c]#['SO4_NA']
-
-        for s in ['SOA_NA','SOA_A1','OM_AC','OM_AI','OM_NI']+ls_so4:
-            un = '$\micro$g/m3'
-            if ds_sel[s].attrs['units']!=un:
-                ds_sel[s] = ds_sel[s]*ds_sel['rho']*kg2ug
-                ds_sel[s].attrs['units']=un
-
-        df = ds_sel.to_dataframe()
-        df = df.drop([co for co in df.columns if (('lat_' in co)|('lon_' in co))], 
-                     axis=1)
-
-        df['SOA'] = df['SOA_NA'] + df['SOA_A1']
-
-        df['OA'] = df['SOA_NA'] + df['SOA_A1'] +df['OM_AC']+df['OM_AI']+df['OM_NI']
-        df['POA'] = df['OM_AC']+df['OM_AI']+df['OM_NI']
-    
-        df['SO4']=0
-        for s in ls_so4:
-            print(s)
-            
-            print(df[s].mean())
-            df['SO4'] = df['SO4'] + df[s]
-    
-    
-        df_daily = df.resample('D').median()
-
-        months = (df_daily.index.month==7 )|(df_daily.index.month==8  )
-
-        df_s = df_daily[months]
-        df_s.loc[:,'year'] = df_s.index.year.values
-
-        df_s.loc[:,'T_C'] = df_s['T'].values-273.15
-        df_s.index = df_s.index.rename('date')
-        df_merge = pd.merge(df_s, df_hyy_1, right_on='date', left_on='date')
-        
-        df_merge['year'] = df_merge.index.year
-
-        
-        dic_df[ca] = df_merge
-        print(ca)
-    
-        months = (df.index.month==7 )|(df.index.month==8  )
-
-        df_s = df[months]
-        df_ym = df_s.resample('Y').median()
-        df_ym.loc[:,'year'] = df_ym.index.year.values
-
-        df_ym.loc[:,'T_C'] = df_ym['T'].values-273.15
-        
-        dic_df_sm[ca] = df_ym
-        print(ca)
-    return dic_df_sm, dic_df
-
-
-dic_df_sm, dic_df = get_dic_df_mod(model_lev_i=-1)
+case_mod
 
 # %%
-col_dic = {}
-for y,c in zip(range(2012, 2019), cols):
-    col_dic[y] =c
+for ca in dic_ds.keys():
+    dic_ds[ca].load()
+
+# %%
+dic_ds[case_mod]
+
+# %%
+
+
+dic_df_sm, dic_df = ds2df_inc_preprocessing(dic_ds, model_lev_i=-1, return_summer_median=True)
+
+
+# %% [markdown]
+# ## Merge with observations:
+
+# %%
+dic_df_pre = dic_df.copy()
+
+# %%
+for ca in dic_df.keys():
+    dic_df[ca] = pd.merge(dic_df_pre[ca], df_hyy_1, right_on='time', left_on='time')
+    dic_df[ca]['year'] = dic_df[ca].index.year
+
+# %%
+dic_df[case_mod]['N50']
+
+# %%
+df_hyy_1
 
 
 # %%
-def plot_scatter(v_x,v_y, df_s, df_sy,ca, 
-                 xlims=None, 
-                 ylims=None,
-                 xlab = None,
-                 ylab = None,
-                 figsize=[6,5],
-                 ax = None,
-                 #fig = None
-                ):
-    if ax is None:
-        fig, ax = plt.subplots(figsize=figsize)
-    else:
-        fig = ax.get_figure()
-    #for y,co in zip(df_s['year'].unique(), cols):
-    
-    #    _df = df_s[df_s['year']==y]
-    _cols = [col_dic[int(y)] for y in df_s['year'].unique()]
-    _my_cmap = ListedColormap(_cols)
-    df_s.plot.scatter(x=v_x,y=v_y, ax=ax, 
-                      c = 'year',
-                      cmap = my_cmap, 
-                      vmax=2018.5, vmin=2011.5)#, label=y )#, c='year', cmap='Paired')
-    #df_sy = df_s.resample('Y').median()
-    if df_sy is not None:
-        for y,co in zip(df_sy['year'].unique(), cols):
-            #df_sy = dic_df_sm[ca]
-            co = col_dic[int(y)]
-            _dfm = df_sy[df_sy['year']==y]
-            
-            #_dfm = _df.median()
-            ax.scatter(_dfm[v_x],_dfm[v_y],c=co, label='__nolegend__' , marker='s', s=200, edgecolor='k')
-    
-    _df_s = df_s[df_s[v_x].notnull() & df_s[v_y].notnull()]
-    x = np.array(_df_s[v_x].values).reshape(-1,1)
-    y=np.array(_df_s[v_y].values).reshape(-1,1)
+def add_log(df, varl=None):
+    if varl is None:
+        varl = ['OA','N100', 'OA (microgram m^-3)','N100 (cm^-3)','N50','N150','N200']
+    var_exist = df.columns
 
-    model = LinearRegression().fit(x,y)
-
-    r_sq = model.score(x, y)
-    print('coefficient of determination:', r_sq)
-
-    print('intercept:', model.intercept_)
-
-    print('slope:', model.coef_)
-    x_s = np.linspace(x.min(),x.max(),10)
-    a = model.coef_[0]
-    b = model.intercept_[0]
-    if b<0:
-        sig = ''
-    else:
-        sig='+'
-    if a<1:
-        
-        lab = r'fit: $y= %.3fx%s%.3f$, r$^2$=%.02f' %(a,sig,b, r_sq)
-    elif a>10:
-        lab = r'fit: $y= %.1fx%s%.1f$, r$^2$=%.02f' %(a,sig,b, r_sq)
-    elif a>100:
-        lab = r'fit: $y= %.0fx%s%.0f$, r$^2$=%.02f' %(a,sig,b, r_sq)
-    else:
-        lab = r'fit: $y= %.2fx%s%.2f$, r$^2$=%.02f' %(a,sig,b, r_sq)
-        
-        
-    ax.plot(x_s, (a*x_s + b), c='k')
-    plt.legend(frameon=False, bbox_to_anchor=(1,1,))
-    #ax.hlines(2000, 5,30, color='k', linewidth=1)
-
-    ax.set_ylim(ylims)
-    ax.set_xlim(xlims)
-    ax.set_xlabel(xlab)
-    ax.set_ylabel(ylab)
+    varl_f = set(varl).intersection(var_exist)
+    print(varl_f)
+    for v in varl_f:
+        df[f'log10({v})'] = np.log10(df[v])
+    return df
 
 
-    from matplotlib.lines import Line2D
-    from matplotlib.patches import Patch
+for c in dic_df.keys():
 
-    custom_lines = [
-        Line2D([0], [0],  color='#0074c3',marker='s',markeredgecolor='k',markersize=10, linewidth=0),
-        Line2D([0], [0], color='#0074c3',marker='o', linewidth=0),
-        Line2D([0], [0], color='k', lw=1),
-                #Patch( color='b', lw=4),
-               # Line2D([0], [0], color=cmap(1.), lw=4)
-               ]
+    dic_df[c] = add_log(dic_df[c])
+    dic_df_sm[c] = add_log(dic_df_sm[c])
 
-    ax.legend(custom_lines, ['Daily median', 'Summer median',lab,],frameon=False,
-          loc='upper left')
-    return fig, ax
+df_joint_hyy = add_log(df_joint_hyy)
+
+
+# %%
+
+# %%
+ca = case_mod
 
 # %%
 mask_obs_N = dic_df[ca]['N100 (cm^-3)'].notnull()
 mask_obs_OA = dic_df[ca]['OA (microgram m^-3)'].notnull()
 
-# %% [markdown]
+# %%
+
+
+# %%
+
+
+# %%
+fig, axs, cax = make_cool_grid()
+
+
+# %% [markdown] tags=[]
 # # Plots
-
-# %%
-fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True,)
-v_x = 'T_C'
-v_y = 'N100'
-ca = cases_inc_Y[0]
-df_s = dic_df[ca][mask_obs_N].loc['2012':]
-
-df_sy = dic_df_sm[ca].loc['2012':]
-xlims = [5,25]
-ylims = [0,4000]
-xlab = r'T [$^\circ$C]'
-ylab = r'N$_{100}$ [cm$^{-3}$]'
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
-                       figsize=[6,7],ax = axs[0],
-                       ylims=ylims, xlab=xlab, ylab = ylab)
-#ax.hlines(2000, 5,30, color='k', linewidth=1)
-ax.set_title('OsloAero_incYield')
-
-ca = cases_orig[0]
-df_s = dic_df[ca][mask_obs_N].loc['2012':]
-
-df_sy = dic_df_sm[ca].loc['2012':]
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
-                       figsize=[6,7],ax = axs[1],
-                       ylims=ylims, xlab=xlab, ylab = ylab)
-#ax.hlines(2000, 5,30, color='k', linewidth=1)
-ax.set_title('OsloAero_orig')
-
-v_x = 'OA (microgram m^-3)'
-v_x = 'T (degree C)'
-
-ca ='OBS'
-df_s = df_joint_hyy.loc['2012':'2014']
-
-df_sy = None#df_joint_hyy.loc['2012':'2014'] #f_hyy_1.resample('Y').median()
-#xlims = [5,30]
-#ylims = [0,2000]
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca, ax = axs[2],
-                       xlims=xlims, ylims=ylims, xlab=xlab, ylab = ylab)
-ax.set_title('Observations')
-
-
-plt.show()
-
-# %%
-fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True, )
-v_x = 'OA'
-v_y = 'N100'
-ca = cases_inc_Y[0]
-df_s = dic_df[ca][mask_obs_N].loc['2012':]
-
-df_sy = dic_df_sm[ca].loc['2012':]
-xlims =  [0,12]
-ylims = [0,4000]
-xlab = r'OA [$\mu g$/m$^3$]'
-ylab = r'N$_{100}$ [cm$^{-3}$]'
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
-                       figsize=[6,7],ax = axs[0],
-                       ylims=ylims, xlab=xlab, ylab = ylab)
-#ax.hlines(2000, 5,30, color='k', linewidth=1)
-ax.set_title('OsloAero_pertSize')
-
-ca = cases_orig[0]
-df_s = dic_df[ca][mask_obs_N].loc['2012':]
-
-df_sy = dic_df_sm[ca].loc['2012':]
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
-                       figsize=[6,7],ax = axs[1],
-                       ylims=ylims, xlab=xlab, ylab = ylab)
-#ax.hlines(2000, 5,30, color='k', linewidth=1)
-ax.set_title('OsloAero_orig')
-
-v_x = 'T (degree C)'
-v_x = 'OA (microgram m^-3)'
-
-ca ='OBS'
-df_s = df_joint_hyy.loc['2012':'2014']
-
-df_sy = None#df_joint_hyy.loc['2012':'2014'] #f_hyy_1.resample('Y').median()
-#xlims = [5,30]
-#ylims = [0,2000]
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca, ax = axs[2],
-                       xlims=xlims, ylims=ylims, xlab=xlab, ylab = ylab)
-ax.set_title('Observations')
-
-
-plt.show()
-
-# %%
-
-fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True,)
-v_x = 'T_C'
-v_y = 'N200'
-ca = cases_inc_Y[0]
-df_s = dic_df[ca][mask_obs_N].loc['2012':]
-
-df_sy = dic_df_sm[ca].loc['2012':]
-xlims = [5,25]
-ylims = [0,800]
-xlab = r'T [$^\circ$C]'
-ylab = r'N$_{200}$ [cm$^{-3}$]'
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
-                       figsize=[6,7],ax = axs[0],
-                       ylims=ylims, xlab=xlab, ylab = ylab)
-#ax.hlines(2000, 5,30, color='k', linewidth=1)
-ax.set_title('OsloAero_pertSize')
-
-ca = cases_orig[0]
-df_s = dic_df[ca][mask_obs_N].loc['2012':]
-
-df_sy = dic_df_sm[ca].loc['2012':]
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
-                       figsize=[6,7],ax = axs[1],
-                       ylims=ylims, xlab=xlab, ylab = ylab)
-#ax.hlines(2000, 5,30, color='k', linewidth=1)
-ax.set_title('OsloAero_orig')
-
-v_x = 'T (degree C)'
-ca ='OBS'
-df_s = df_joint_hyy.loc['2012':'2014']
-
-df_sy = None#df_joint_hyy.loc['2012':'2014'] #f_hyy_1.resample('Y').median()
-#xlims = [5,30]
-#ylims = [0,2000]
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca, ax = axs[2],
-                       xlims=xlims, ylims=ylims, xlab=xlab, ylab = ylab)
-ax.set_title('Observations')
-
-
-plt.show()
-
-# %%
-fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True, )
-v_x = 'OA'
-v_y = 'N200'
-ca = cases_inc_Y[0]
-df_s = dic_df[ca][mask_obs_N].loc['2012':]
-
-df_sy = dic_df_sm[ca].loc['2012':]
-xlims =  [0,12]
-ylims = [0,800]
-xlab = r'OA [$\mu g$/m$^3$]'
-ylab = r'N$_{200}$ [cm$^{-3}$]'
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
-                       figsize=[6,7],ax = axs[0],
-                       ylims=ylims, xlab=xlab, ylab = ylab)
-#ax.hlines(2000, 5,30, color='k', linewidth=1)
-ax.set_title('OsloAero_pertSize')
-
-ca = cases_orig[0]
-df_s = dic_df[ca][mask_obs_N].loc['2012':]
-
-df_sy = dic_df_sm[ca].loc['2012':]
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
-                       figsize=[6,7],ax = axs[1],
-                       ylims=ylims, xlab=xlab, ylab = ylab)
-#ax.hlines(2000, 5,30, color='k', linewidth=1)
-ax.set_title('OsloAero_orig')
-
-v_x = 'T (degree C)'
-v_x = 'OA (microgram m^-3)'
-
-ca ='OBS'
-df_s = df_joint_hyy.loc['2012':'2014']
-
-df_sy = None#df_joint_hyy.loc['2012':'2014'] #f_hyy_1.resample('Y').median()
-#xlims = [5,30]
-#ylims = [0,2000]
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca, ax = axs[2],
-                       xlims=xlims, ylims=ylims, xlab=xlab, ylab = ylab)
-ax.set_title('Observations')
-
-
-plt.show()
-
-# %%
-
-fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True, )
-v_x = 'T_C'
-v_y = 'N150'
-ca = cases_inc_Y[0]
-df_s = dic_df[ca][mask_obs_N].loc['2012':]
-
-df_sy = dic_df_sm[ca].loc['2012':]
-xlims = [5,30]
-ylims = [0,1000]
-xlab = r'T [$^\circ$C]'
-ylab = r'N$_{150}$ [cm$^{-3}$]'
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
-                       figsize=[6,7],ax = axs[0],
-                       ylims=ylims, xlab=xlab, ylab = ylab)
-#ax.hlines(2000, 5,30, color='k', linewidth=1)
-ax.set_title('OsloAero_sizedist_pert')
-
-ca = cases_orig[0]
-df_s = dic_df[ca][mask_obs_N].loc['2012':]
-
-df_sy = dic_df_sm[ca].loc['2012':]
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
-                       figsize=[6,7],ax = axs[1],
-                       ylims=ylims, xlab=xlab, ylab = ylab)
-#ax.hlines(2000, 5,30, color='k', linewidth=1)
-ax.set_title('OsloAero_orig')
-
-v_x = 'T (degree C)'
-ca ='OBS'
-df_s = df_joint_hyy.loc['2012':'2014']
-
-df_sy = None#df_joint_hyy.loc['2012':'2014'] #f_hyy_1.resample('Y').median()
-#xlims = [5,30]
-#ylims = [0,2000]
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca, ax = axs[2],
-                       xlims=xlims, ylims=ylims, xlab=xlab, ylab = ylab)
-ax.set_title('Observations')
-
-
-plt.show()
-
-# %%
-fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True, )
-v_x = 'OA'
-v_y = 'N150'
-ca = cases_inc_Y[0]
-df_s = dic_df[ca][mask_obs_N].loc['2012':]
-
-df_sy = dic_df_sm[ca].loc['2012':]
-xlims =  [0,12]
-ylims = [0,1000]
-xlab = r'OA [$\mu g$/m$^3$]'
-ylab = r'N$_{150}$ [cm$^{-3}$]'
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
-                       figsize=[6,7],ax = axs[0],
-                       ylims=ylims, xlab=xlab, ylab = ylab)
-#ax.hlines(2000, 5,30, color='k', linewidth=1)
-ax.set_title('OsloAero_incYield')
-
-ca = cases_orig[0]
-df_s = dic_df[ca][mask_obs_N].loc['2012':]
-
-df_sy = dic_df_sm[ca].loc['2012':]
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
-                       figsize=[6,7],ax = axs[1],
-                       ylims=ylims, xlab=xlab, ylab = ylab)
-#ax.hlines(2000, 5,30, color='k', linewidth=1)
-ax.set_title('OsloAero_orig')
-
-v_x = 'T (degree C)'
-v_x = 'OA (microgram m^-3)'
-
-ca ='OBS'
-df_s = df_joint_hyy.loc['2012':'2014']
-
-df_sy = None#df_joint_hyy.loc['2012':'2014'] #f_hyy_1.resample('Y').median()
-#xlims = [5,30]
-#ylims = [0,2000]
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca, ax = axs[2],
-                       xlims=xlims, ylims=ylims, xlab=xlab, ylab = ylab)
-ax.set_title('Observations')
-
-
-plt.show()
-
-# %%
-
-fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True, )
-v_x = 'T_C'
-v_y = 'N50'
-ca = cases_inc_Y[0]
-df_s = dic_df[ca][mask_obs_N].loc['2012':]
-
-df_sy = dic_df_sm[ca].loc['2012':]
-xlims = [5,25]
-ylims = [0,8000]
-xlab = r'T [$^\circ$C]'
-ylab = r'N$_{50}$ [cm$^{-3}$]'
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
-                       figsize=[6,7],ax = axs[0],
-                       ylims=ylims, xlab=xlab, ylab = ylab)
-#ax.hlines(2000, 5,30, color='k', linewidth=1)
-ax.set_title('OsloAero_pertSize')
-
-ca = cases_orig[0]
-df_s = dic_df[ca][mask_obs_N].loc['2012':]
-
-df_sy = dic_df_sm[ca].loc['2012':]
-xlims = [5,30]
-ylims = [0,8000]
-xlab = r'T [$^\circ$C]'
-ylab = r'N$_{50}$ [cm$^{-3}$]'
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
-                       figsize=[6,7],ax = axs[1],
-                       ylims=ylims, xlab=xlab, ylab = ylab)
-#ax.hlines(2000, 5,30, color='k', linewidth=1)
-ax.set_title('OsloAero_orig')
-
-v_x = 'T (degree C)'
-#v_x = 'OA (microgram m^-3)'
-
-v_y = 'N50'
-ca ='OBS'
-df_s = df_joint_hyy.loc['2012':'2014']
-
-df_sy = None#df_joint_hyy.loc['2012':'2014'] #f_hyy_1.resample('Y').median()
-#xlims = [5,30]
-#ylims = [0,2000]
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca, ax = axs[2],
-                       xlims=xlims, ylims=ylims, xlab=xlab, ylab = ylab)
-ax.set_title('Observations')
-
-
-plt.show()
-
-
-# %%
-fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True, )
-v_x = 'OA'
-v_y = 'N50'
-ca = cases_inc_Y[0]
-df_s = dic_df[ca][mask_obs_N].loc['2012':]
-
-df_sy = dic_df_sm[ca].loc['2012':]
-xlims =  [0,25]
-ylims = [0,5500]
-xlab = r'OA [$\mu g$/m$^3$]'
-ylab = r'N$_{50}$ [cm$^{-3}$]'
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
-                       figsize=[6,7],ax = axs[0],
-                       ylims=ylims, xlab=xlab, ylab = ylab)
-#ax.hlines(2000, 5,30, color='k', linewidth=1)
-ax.set_title('OsloAero_pertSize')
-
-ca = cases_orig[0]
-df_s = dic_df[ca][mask_obs_N].loc['2012':]
-
-df_sy = dic_df_sm[ca].loc['2012':]
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
-                       figsize=[6,7],ax = axs[1],
-                       ylims=ylims, xlab=xlab, ylab = ylab)
-#ax.hlines(2000, 5,30, color='k', linewidth=1)
-ax.set_title('OsloAero_orig')
-
-v_x = 'T (degree C)'
-ca ='OBS'
-df_s = df_joint_hyy.loc['2012':'2014']
-
-df_sy = None#df_joint_hyy.loc['2012':'2014'] #f_hyy_1.resample('Y').median()
-#xlims = [5,30]
-#ylims = [0,2000]
-fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca, ax = axs[2],
-                       xlims=xlims, ylims=ylims, xlab=xlab, ylab = ylab)
-ax.set_title('Observations')
-
-
-plt.show()
 
 # %% [markdown]
 # ## N50
 
 # %%
+l = [1]
+l*3
 
-fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True,)
+# %% tags=[]
+
+fig, axs, cax = make_cool_grid(ncols=3)
+#add_cbar(cax)
+
+
 v_x = 'OA'
 
 v_y = 'N50'
@@ -799,15 +351,16 @@ df_s = dic_df[ca][mask_obs_N].loc['2012':]
 df_sy = dic_df_sm[ca].loc['2012':]
 xlims = [0,12]
 
-ylims = [0,5000]
+ylims = [0,5200]
 xlab = 'OA  $\mu m^{-3}$)'
 
 ylab = r'N$_{50}$ [cm$^{-3}$]'
 fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
                        figsize=[6,7],ax = axs[0],
-                       ylims=ylims, xlab=xlab, ylab = ylab)
+                       ylims=ylims, xlab=xlab, ylab = ylab,
+                      add_cbar=False)
 #ax.hlines(2000, 5,30, color='k', linewidth=1)
-ax.set_title('OsloAero_pertSizeDist')
+ax.set_title('OsloAero_incY')
 
 ca = cases_orig[0]
 df_s = dic_df[ca][mask_obs_N].loc['2012':]
@@ -815,6 +368,71 @@ df_s = dic_df[ca][mask_obs_N].loc['2012':]
 df_sy = dic_df_sm[ca].loc['2012':]
 fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
                        figsize=[6,7],ax = axs[1],
+                       ylims=ylims, xlab=xlab, ylab = ylab,
+                      add_cbar=False)
+
+#ax.hlines(2000, 5,30, color='k', linewidth=1)
+ax.set_title('OsloAero_orig')
+
+v_x = 'OA (microgram m^-3)'
+
+ca ='OBS'
+df_s = df_joint_hyy.loc['2012':'2014']
+
+df_sy = None#df_joint_hyy.loc['2012':'2014'] #f_hyy_1.resample('Y').median()
+#xlims = [5,30]
+#ylims = [0,2000]
+fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca, ax = axs[2],
+                       xlims=xlims, ylims=ylims, xlab=xlab, ylab = ylab,
+                      add_cbar=False)
+ax.set_title('Observations')
+
+
+
+
+
+
+fn = make_fn_scat(cases_inc_Y[0], v_x,v_y)
+
+fig.savefig(fn, dpi=150)
+
+
+plt.show()
+
+# %% tags=[]
+
+#fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True,)
+
+fig, axs, cax = make_cool_grid(ncols=3)
+
+v_x = 'OA'
+
+
+v_y = 'N50'
+ca = cases_inc_Y[0]
+df_s = dic_df[ca][mask_obs_N].loc['2012':]
+
+df_sy = dic_df_sm[ca].loc['2012':]
+xlims = [0,12]
+
+ylims = [0,5200]
+xlab = 'OA  $\mu m^{-3}$)'
+
+ylab = r'N$_{50}$ [cm$^{-3}$]'
+fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
+                       figsize=[6,7],ax = axs[0],
+                       add_cbar=False,
+                       ylims=ylims, xlab=xlab, ylab = ylab)
+#ax.hlines(2000, 5,30, color='k', linewidth=1)
+ax.set_title('OsloAero_incY')
+
+ca = cases_orig[0]
+df_s = dic_df[ca][mask_obs_N].loc['2012':]
+
+df_sy = dic_df_sm[ca].loc['2012':]
+fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
+                       figsize=[6,7], ax = axs[1],
+                       add_cbar=False,
                        ylims=ylims, xlab=xlab, ylab = ylab)
 #ax.hlines(2000, 5,30, color='k', linewidth=1)
 ax.set_title('OsloAero_orig')
@@ -828,15 +446,21 @@ df_sy = None#df_joint_hyy.loc['2012':'2014'] #f_hyy_1.resample('Y').median()
 #xlims = [5,30]
 #ylims = [0,2000]
 fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca, ax = axs[2],
+                       add_cbar=False,
                        xlims=xlims, ylims=ylims, xlab=xlab, ylab = ylab)
 ax.set_title('Observations')
+fn = make_fn_scat(cases_inc_Y[0], v_x,v_y)
+
+fig.savefig(fn, dpi=150)
 
 
 plt.show()
 
 # %%
 
-fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True,)
+#fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True,)
+
+fig, axs, cax = make_cool_grid(ncols=3)
 v_x = 'T_C'
 
 v_y = 'N50'
@@ -884,11 +508,117 @@ ax.set_title('Observations')
 plt.show()
 
 # %% [markdown]
+# ## Log scale
+
+# %%
+
+fig, axs, cax = make_cool_grid(ncols=3)
+
+v_x = 'T_C'
+
+v_y = 'log10(N50)'
+ca = cases_inc_Y[0]
+df_s = dic_df[ca][mask_obs_N].loc['2012':]
+
+df_sy = dic_df_sm[ca].loc['2012':]
+xlims = [5,25]
+
+ylims = [2.25,4]
+# xlab = 'OA  $\mu m^{-3}$)'
+xlab = r'T [$^\circ$C]'
+
+ylab = r'log10(N$_{50}$ [cm$^{-3}$])'
+fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
+                       figsize=[6,7],ax = axs[0],
+                       ylims=ylims, xlab=xlab, ylab = ylab)
+#ax.hlines(2000, 5,30, color='k', linewidth=1)
+ax.set_title('OsloAero_pertSizeDist')
+
+ca = cases_orig[0]
+df_s = dic_df[ca][mask_obs_N].loc['2012':]
+
+df_sy = dic_df_sm[ca].loc['2012':]
+fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
+                       figsize=[6,7],ax = axs[1],
+                       ylims=ylims, xlab=xlab, ylab = ylab)
+#ax.hlines(2000, 5,30, color='k', linewidth=1)
+ax.set_title('OsloAero_orig')
+
+v_x = 'T (degree C)'
+
+ca ='OBS'
+df_s = df_joint_hyy.loc['2012':'2014']
+
+df_sy = None#df_joint_hyy.loc['2012':'2014'] #f_hyy_1.resample('Y').median()
+#xlims = [5,30]
+#ylims = [0,2000]
+fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca, ax = axs[2],
+                       xlims=xlims, ylims=ylims, xlab=xlab, ylab = ylab)
+ax.set_title('Observations')
+
+
+plt.show()
+
+# %%
+
+
+fig, axs, cax = make_cool_grid(ncols=3)
+
+v_x = 'T_C'
+
+v_y = 'log10(OA)'
+ca = cases_inc_Y[0]
+df_s = dic_df[ca][mask_obs_N].loc['2012':]
+
+df_sy = dic_df_sm[ca].loc['2012':]
+xlims = [5,25]
+
+ylims = None# [0,5000]
+# xlab = 'OA  $\mu m^{-3}$)'
+xlab = r'T  [$^\circ$C]'
+
+ylab = r'log10(OA) [$\mu m^{-3}$]'
+fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
+                       figsize=[6,7],ax = axs[0],
+                       ylims=ylims, xlab=xlab, ylab = ylab)
+#ax.hlines(2000, 5,30, color='k', linewidth=1)
+ax.set_title('OsloAero_pertSizeDist')
+
+ca = cases_orig[0]
+df_s = dic_df[ca][mask_obs_N].loc['2012':]
+
+df_sy = dic_df_sm[ca].loc['2012':]
+fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
+                       figsize=[6,7],ax = axs[1],
+                       ylims=ylims, xlab=xlab, ylab = ylab)
+#ax.hlines(2000, 5,30, color='k', linewidth=1)
+ax.set_title('OsloAero_orig')
+
+v_y = 'log10(OA (microgram m^-3))'
+v_x = 'T (degree C)'
+
+ca ='OBS'
+df_s = df_joint_hyy.loc['2012':'2014']
+
+df_sy = None#df_joint_hyy.loc['2012':'2014'] #f_hyy_1.resample('Y').median()
+#xlims = [5,30]
+#ylims = [0,2000]
+fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca, ax = axs[2],
+                       xlims=xlims, ylims=ylims, xlab=xlab, ylab = ylab)
+ax.set_title('Observations')
+
+
+plt.show()
+
+# %% [markdown]
 # ## N100
 
 # %%
 
-fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True,)
+
+
+fig, axs, cax = make_cool_grid(ncols=3)
+
 v_x = 'OA'
 
 v_y = 'N100'
@@ -929,13 +659,18 @@ df_sy = None#df_joint_hyy.loc['2012':'2014'] #f_hyy_1.resample('Y').median()
 fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca, ax = axs[2],
                        xlims=xlims, ylims=ylims, xlab=xlab, ylab = ylab)
 ax.set_title('Observations')
+fn = make_fn_scat(cases_inc_Y[0], v_x,v_y)
+
+fig.savefig(fn, dpi=150)
 
 
 plt.show()
 
 # %%
 
-fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True,)
+
+fig, axs, cax = make_cool_grid(ncols=3)
+
 v_x = 'T_C'
 
 v_y = 'N100'
@@ -987,7 +722,10 @@ plt.show()
 
 # %%
 
-fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True,)
+
+
+fig, axs, cax = make_cool_grid(ncols=3)
+
 v_x = 'OA'
 
 v_y = 'N150'
@@ -1029,11 +767,16 @@ fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca, ax = axs[2],
                        xlims=xlims, ylims=ylims, xlab=xlab, ylab = ylab)
 ax.set_title('Observations')
 
+fn = make_fn_scat(cases_inc_Y[0], v_x,v_y)
+
+fig.savefig(fn, dpi=150)
 
 plt.show()
 
 # %%
-fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True,)
+
+fig, axs, cax = make_cool_grid(ncols=3)
+
 v_x = 'T_C'
 
 v_y = 'N150'
@@ -1085,7 +828,9 @@ plt.show()
 
 # %%
 
-fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True,)
+
+fig, axs, cax = make_cool_grid(ncols=3)
+
 v_x = 'OA'
 
 v_y = 'N200'
@@ -1127,11 +872,16 @@ fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca, ax = axs[2],
                        xlims=xlims, ylims=ylims, xlab=xlab, ylab = ylab)
 ax.set_title('Observations')
 
+fn = make_fn_scat(cases_inc_Y[0], v_x,v_y)
+
+fig.savefig(fn, dpi=150)
 
 plt.show()
 
 # %%
-fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True,)
+
+fig, axs, cax = make_cool_grid(ncols=3)
+
 v_x = 'T_C'
 
 v_y = 'N200'
@@ -1178,9 +928,116 @@ ax.set_title('Observations')
 
 plt.show()
 
-# %% [markdown]
-# ## The end
-#
+# %% [markdown] tags=[]
+# ## OA vs temperature:
+
+# %%
+
+
+fig, axs, cax = make_cool_grid(ncols=3)
+
+v_x = 'T_C'
+
+v_y = 'OA'
+ca = cases_inc_Y[0]
+df_s = dic_df[ca][mask_obs_N].loc['2012':]
+
+df_sy = dic_df_sm[ca].loc['2012':]
+ylims = [0,12]
+
+xlims = [5,30]
+ylab = 'OA  $\mu m^{-3}$)'
+xlab = r'T [$^\circ$C]'
+
+ylab = 'OA  $\mu m^{-3}$)'
+
+fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
+                       figsize=[6,7],ax = axs[0],
+                       ylims=ylims, xlab=xlab, ylab = ylab)
+#ax.hlines(2000, 5,30, color='k', linewidth=1)
+ax.set_title('OsloAero_incY')
+
+ca = cases_orig[0]
+df_s = dic_df[ca][mask_obs_N].loc['2012':]
+
+df_sy = dic_df_sm[ca].loc['2012':]
+fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
+                       figsize=[6,7],ax = axs[1],
+                       ylims=ylims, xlab=xlab, ylab = ylab)
+#ax.hlines(2000, 5,30, color='k', linewidth=1)
+ax.set_title('OsloAero_orig')
+
+v_y = 'OA (microgram m^-3)'
+v_x = 'T (degree C)'
+
+ca ='OBS'
+df_s = df_joint_hyy.loc['2012':'2014']
+
+df_sy = None#df_joint_hyy.loc['2012':'2014'] #f_hyy_1.resample('Y').median()
+#xlims = [5,30]
+#ylims = [0,2000]
+fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca, ax = axs[2],
+                       xlims=xlims, ylims=ylims, xlab=xlab, ylab = ylab)
+ax.set_title('Observations')
+fn = make_fn_scat(cases_inc_Y[0], v_x,v_y)
+
+fig.savefig(fn, dpi=150)
+
+
+plt.show()
+
+# %%
+
+fig, axs = plt.subplots(1,3, figsize=[18,4], sharey=True,)
+v_x = 'T_C'
+
+v_y = 'log10(OA)'
+ca = cases_inc_Y[0]
+df_s = dic_df[ca][mask_obs_N].loc['2012':]
+
+df_sy = dic_df_sm[ca].loc['2012':]
+ylims = [-.5,1.5]
+
+xlims = [5,30]
+ylab = 'log(OA  $\mu m^{-3}$))'
+xlab = r'T [$^\circ$C]'
+
+ylab = 'log10(OA  $\mu m^{-3}$))'
+
+fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
+                       figsize=[6,7],ax = axs[0],
+                       ylims=ylims, xlab=xlab, ylab = ylab)
+#ax.hlines(2000, 5,30, color='k', linewidth=1)
+ax.set_title('OsloAero_incY')
+
+ca = cases_orig[0]
+df_s = dic_df[ca][mask_obs_N].loc['2012':]
+
+df_sy = dic_df_sm[ca].loc['2012':]
+fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca,xlims=xlims,
+                       figsize=[6,7],ax = axs[1],
+                       ylims=ylims, xlab=xlab, ylab = ylab)
+#ax.hlines(2000, 5,30, color='k', linewidth=1)
+ax.set_title('OsloAero_orig')
+
+v_y = 'log10(OA (microgram m^-3))'
+v_x = 'T (degree C)'
+
+ca ='OBS'
+df_s = df_joint_hyy.loc['2012':'2014']
+
+df_sy = None#df_joint_hyy.loc['2012':'2014'] #f_hyy_1.resample('Y').median()
+#xlims = [5,30]
+#ylims = [0,2000]
+fig, ax = plot_scatter(v_x,v_y, df_s, df_sy, ca, ax = axs[2],
+                       xlims=xlims, ylims=ylims, xlab=xlab, ylab = ylab)
+ax.set_title('Observations')
+fn = make_fn_scat(cases_inc_Y[0], v_x,v_y)
+
+fig.savefig(fn, dpi=150)
+
+
+plt.show()
 
 # %%
 

@@ -12,10 +12,12 @@ import time
 import pandas as pd
 import useful_scit.util.log as log
 
+log.ger.setLevel(log.log.INFO)
+
 path_input_data = get_input_datapath()
 
 
-# log.ger.setLevel(log.log.INFO)
+log.ger.setLevel(log.log.INFO)
 
 def convert_lon_to_360(lon):
     return lon % 360
@@ -68,7 +70,7 @@ def update_stat_proc(r):
 
 
 # %%
-def launch_ncks(comms, max_launches=20):
+def launch_ncks(comms, max_launches=1):
     """
     Launch a number of processes to calculate monthly files for file.
     :param comms: list of commands to run
@@ -109,12 +111,13 @@ def launch_ncks(comms, max_launches=20):
             l_df.loc[co, 'status'] = 'running'
 
         log.ger.info(l_df)
-        time.sleep(1)
+        time.sleep(5)
 
 
 # %%
 
 def extract_subset(case_name='OsloAero_intBVOC_f19_f19_mg17_full', from_time='2012-01-01', to_time='2015-01-01',
+                   station='SMR',
                    lat_lims=None, lon_lims=None, out_folder=None, tmp_folder=None, history_field='.h1.', ):
     # %%
     # lat_lims =None
@@ -128,9 +131,16 @@ def extract_subset(case_name='OsloAero_intBVOC_f19_f19_mg17_full', from_time='20
     # %%
 
     if lat_lims is None:
-        lat_lims = [60., 66.]
+        if station=='SMR':
+            lat_lims = [60., 66.]
+        elif station=='ATTO':
+            lat_lims = [-8.,-1.]
     if lon_lims is None:
-        lon_lims = [22., 30.]
+        if station=='SMR':
+            lon_lims = [22., 30.]
+        elif station == 'ATTO':
+            lon_lims = [-67.,-52.]
+
     print(lat_lims)
     print(lon_lims)
     lon_lims = [convert_lon_to_360(lon_lims[0]), convert_lon_to_360(lon_lims[1])]
@@ -156,7 +166,7 @@ def extract_subset(case_name='OsloAero_intBVOC_f19_f19_mg17_full', from_time='20
     files = [x for x in p if x.is_file()]
 
     # %%
-
+    print(files)
     file = files[0]
     ds = xr.open_dataset(file)
     fn_landfrac = tmp_folder / 'LANDFRAC_full.nc'
@@ -212,7 +222,7 @@ def extract_subset(case_name='OsloAero_intBVOC_f19_f19_mg17_full', from_time='20
         # -v u10max,v10max
         comms.append(co)
     # %%
-    launch_ncks(comms, max_launches=20)
+    launch_ncks(comms, max_launches=5)
     print('done')
     # %%
     # %%
@@ -240,3 +250,4 @@ def extract_subset(case_name='OsloAero_intBVOC_f19_f19_mg17_full', from_time='20
 
 if __name__ == '__main__':
     extract_subset(*sys.argv[1:])
+

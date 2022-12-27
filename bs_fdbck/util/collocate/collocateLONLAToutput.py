@@ -185,3 +185,6 @@ class CollocateLONLATout(CollocateModel):
         ds_conc: xr.Dataset
         ds_conc = ds_conc.sel(time=~ds_conc.indexes['time'].duplicated())
         return ds_conc
+
+    def get_new_instance(self, *_vars, **kwargs):
+        return CollocateLONLATout(*_vars, **kwargs)

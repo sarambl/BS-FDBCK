@@ -153,7 +153,7 @@ def filelist_NorESM(case, path, from_time, to_time, history_field='.h0.', comp='
     # because code is old and does a lot of stuff:
     path_raw_data = str(path_raw_data) + '/'
     filelist_d = [f for f in listdir(path_raw_data) if
-                  ((history_field in f) and f[0] != '.')]  # list of filenames with correct req in path folder
+                  ((history_field in f) and ((f[0] != '.')) and ('.nc_tmp' not in f))]  # list of filenames with correct req in path folder
     filelist_d.sort()
     _ln = len(case) + len(model_lab) + 5
     filelist_time = [

@@ -9,6 +9,7 @@
       <excludeFolder url="file://$MODULE_DIR$/bs_fdbck/notebooks/archive_old" />
       <excludeFolder url="file://$MODULE_DIR$/bs_fdbck/notebooks/Plots" />
       <excludeFolder url="file://$MODULE_DIR$/bs_fdbck/preprocess/archive" />
+      <excludeFolder url="file://$MODULE_DIR$/bs_fdbck/notebooks/x_UPDRAFT_study/Data" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

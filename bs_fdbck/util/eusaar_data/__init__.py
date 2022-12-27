@@ -471,7 +471,7 @@ dall_c = "Dall'Osto 2018 categories"
 sorter_def = ['North', 'Center', 'South (spring)', 'South (winter)', 'Overlap']
 
 
-def get_ordered_stations(cat=dall_c, sorter=None):
+def get_ordered_stations(cat=None, sorter=None):
     if sorter is None:
         sorter = sorter_def
     coll_ltr = collocate_locations.transpose()
@@ -480,7 +480,6 @@ def get_ordered_stations(cat=dall_c, sorter=None):
 
 
 # %%
-list(get_ordered_stations())
 
 
 # %%

@@ -14,7 +14,7 @@ import pandas as pd
 # %%
 
 
-def get_field_fixed(case, varlist, from_time, to_time, raw_data_path=constants.get_input_datapath(),
+def     get_field_fixed(case, varlist, from_time, to_time, raw_data_path=constants.get_input_datapath(),
                     pressure_adjust=True, model = 'NorESM', history_fld='.h0.', comp='atm', chunks=None,
                     get_constants=True):
     """

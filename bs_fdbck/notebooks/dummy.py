@@ -25,7 +25,7 @@ import numpy as np
 
 from pathlib import Path
 
-from bs_fdbck.constants import measurements_path, path_outdata, path_extract_latlon_outdata
+from bs_fdbck.constants import path_measurement_data, path_outdata, path_extract_latlon_outdata
 
 # %%
 xr.set_options(keep_attrs=True) 

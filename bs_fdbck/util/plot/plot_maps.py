@@ -31,6 +31,9 @@ def fix_axis4map_plot(ax):
     gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=False,
                       linewidth=1, color='gray', alpha=0.5, linestyle='--')
     gl.xlabels_top = False
+    #gl:plt.grid
+    #gl.left_labels(top=False)
+
     gl.ylabels_left = False
     # gl.xlines = False
     gl.xlocator = mticker.FixedLocator([-180, -90, 0, 90, 180])
@@ -64,7 +67,8 @@ def subplots_map(*vars, **kwargs):
 
 
 
-def plot_map(var, case, cases_dic, figsize=None,
+def plot_map(var, case, cases_dic,
+             figsize=None,
              kwargs_abs=None, ax=None,
              cmap_abs='Reds',
              cbar_orientation='vertical',

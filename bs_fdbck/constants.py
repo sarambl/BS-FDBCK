@@ -1,11 +1,11 @@
 import os
 import socket
-from useful_scit.util.make_folders import make_folders
+#from useful_scit.util.make_folders import make_folders
 import pandas as pd
 from pathlib import Path
 from bs_fdbck.project_root import get_project_base
 
-
+#project_name = 'BS-FDBCK'
 project_name = 'BS-FDBCK'
 hostname = socket.gethostname()
 # Raw data path:
@@ -26,10 +26,17 @@ package_base_path = analysis_base_path / project_name
 ## Models:
 raw_data_path_NorESM = project_base_path / _data_folder
 
-raw_data_path_TM5 = Path(project_base_path) / 'other_data'/'stlznbrg2021'/'TM5'
+# raw_data_path_TM5 = Path(project_base_path) / 'other_data'/'stlznbrg2021'/'TM5'
+raw_data_path_echam = Path(project_base_path) / 'other_data'/'BS-FDBCK'/'ECHAM-SALSA'
+raw_data_path_ukesm = Path(project_base_path) / 'other_data'/'BS-FDBCK'/'UKESM'
+raw_data_path_ecEarth = Path('/proj/aerosol_esm_lund/users/x_casve/BIG_ISMO/output/ECE3_output_Sara/')
 
 pathdic_raw_data = {'NorESM': raw_data_path_NorESM,
-                    'TM5': raw_data_path_TM5}  # [file_source]}
+                    'ECHAM-SALSA': raw_data_path_echam,
+                    'UKESM': raw_data_path_ukesm,
+                    'EC-Earth': raw_data_path_ecEarth
+                    #'TM5': raw_data_path_TM5}  # [file_source]}
+                    }
 
 
 def get_input_datapath(model='NorESM'):
@@ -37,7 +44,8 @@ def get_input_datapath(model='NorESM'):
 
 ## Measuremens:
 
-measurements_path= package_base_path /'Data'
+path_measurement_data = package_base_path / 'Data'
+
 
 # %%
 # Output paths:
@@ -73,6 +81,7 @@ path_eusaar_data = project_base_path / 'EUSAAR_data'
 
 
 path_EBAS_data = analysis_base_path /project_name/ 'Data' /'EBAS'
+
 
 # Output data:
 
@@ -112,7 +121,8 @@ def get_outdata_path(key):
         return path_outdata / key
 
 
-make_folders(path_outdata)
+Path(path_outdata).mkdir(parents=True, exist_ok=True)
+#make_folders(path_outdata)
 
 # data info
 proj_lc = project_name.lower().replace('-', '_')
@@ -124,12 +134,22 @@ if os.path.isfile(path_locations_file):
     collocate_locations = pd.read_csv(path_locations_file, index_col=0)
 else:
     _dic = dict(Hyytiala={'lat': 61.51, 'lon': 24.17},
-                Melpitz={'lat': 51.32, 'lon': 12.56},
-                Amazonas={'lat': -3., 'lon': -63.},
-                Beijing={'lat': 40, 'lon': 116})
+                Melpitz={'lat': 51.32,  'lon': 12.56},
+                Amazonas={'lat': -3.,   'lon': -63.},
+                Beijing={'lat': 40,     'lon': 116})
     collocate_locations = pd.DataFrame.from_dict(_dic)
     collocate_locations.to_csv(path_locations_file)
 
+
+path_echam_station = path_data_info /'echam_info' / 'echam_stations.csv'
+
+path_ec_earth_vars = path_data_info/'ec_earth_info'/'ec_earth_var_overview.csv'
+
+def get_locations(model = 'NorESM') :
+    # %%
+    locs = collocate_locations
+    # %%
+    return locs
 
 
 # %%

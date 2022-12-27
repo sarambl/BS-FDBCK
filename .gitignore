@@ -27,7 +27,7 @@
 .idea/**/dynamic.xml
 .idea/**/uiDesigner.xml
 .idea/**/dbnavigator.xml
-
+*Plots/
 # Gradle
 .idea/**/gradle.xml
 .idea/**/libraries
@@ -128,3 +128,4 @@ ipython_config.py
 /bs_fdbck/notebooks/archive_now/
 /bs_fdbck/preprocess/archive/
 /.idea/
+/bs_fdbck/notebooks/x_UPDRAFT_study/Data/

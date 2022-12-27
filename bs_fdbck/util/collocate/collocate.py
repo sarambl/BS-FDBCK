@@ -1,22 +1,32 @@
 import os
 import time
+
+from bs_fdbck.constants import get_locations
 from bs_fdbck.data_info import get_nice_name_case
 from bs_fdbck.util.imports.fix_xa_dataset_v2 import xr_fix
 from bs_fdbck.util.imports.get_pressure_coord_fields import get_pressure_coord_fields
 
 from bs_fdbck.util.imports.import_fields_xr_v2 import xr_import_NorESM
 from useful_scit.util import log
-
+import pandas as pd
 from bs_fdbck import constants
 import xarray as xr
 from bs_fdbck.util.practical_functions import make_folders
 from dask.diagnostics import ProgressBar
 
 
+import warnings
+warnings.filterwarnings(action='ignore',category=FutureWarning,module='xarray' )
+
+
+
 class Collocate:
     pass
 
 
+# %%
+
+# %%
 class CollocateModel(Collocate):
     """
     collocate a model to a list of locations
@@ -25,13 +35,13 @@ class CollocateModel(Collocate):
     input_dataset = None
 
     def __init__(self, case_name, from_time, to_time,
-                 is_sectional,
-                 time_res,
+                 is_sectional=False,
+                 time_res='hour',
                  space_res='locations',
                  model_name='NorESM',
                  history_field='.h0.',
-                 raw_data_path=constants.get_input_datapath(),
-                 locations=constants.collocate_locations,
+                 raw_data_path=None,
+                 locations=None,
                  read_from_file=True,
                  chunks=None,
                  use_pressure_coords=False,
@@ -48,6 +58,10 @@ class CollocateModel(Collocate):
         :param space_res: 'full', 'locations'
         :param model_name:
         """
+        if locations is None:
+            locations = get_locations(model_name)
+        if raw_data_path is None:
+            raw_data_path = constants.get_input_datapath(model=model_name)
         self.chunks = chunks
         self.read_from_file = read_from_file
         self.model_name = model_name
@@ -109,7 +123,7 @@ class CollocateModel(Collocate):
         print('Loading input dataset from raw file:')
         ds = xr_import_NorESM(self.case_name, varlist, self.from_time, self.to_time,
                               model=self.model_name, history_fld=self.history_field, comp='atm', chunks=chunks)
-        ds = xr_fix(ds)
+        ds = xr_fix(ds, model_name=self.model_name)
 
         self.input_dataset = ds
         return ds
@@ -125,10 +139,6 @@ class CollocateModel(Collocate):
         :param chunks:
         :return:
         """
-        # if not self.isSectional:
-        #    var_names = [D_NDLOG_D_MOD]
-        # else:
-        #    var_names = [D_ND LOG_D_MOD, D_NDLOG_D_SEC]
         if chunks is None:
             chunks = self.chunks
         fn_list = []
@@ -149,7 +159,7 @@ class CollocateModel(Collocate):
         return ds
 
     def savepath_coll_ds(self, var_name):
-        #print(self.space_resolution)
+        # print(self.space_resolution)
         sp = str(self.savepath_root)
         st = '/%s/%s/%s/%s_%s' % (sp, self.model_name, self.case_name,
                                   var_name, self.case_name)
@@ -187,22 +197,30 @@ class CollocateModel(Collocate):
         # ds.close()
         return ds
 
+
+
+
+
     def check_if_load_raw_necessary(self, varlist):
+        print('got to check_if_load_raw_necessary')
         for var in varlist:
             fn = self.savepath_coll_ds(var)
-            # print(fn)
+            print(f'Checking if {fn} exists')
             if not os.path.isfile(fn):
                 print(f'File {fn} not found')
                 return True
         return False
 
-    def make_station_data_all(self):
+    def make_station_data_all(self, varlist=None):
         time1 = time.time()
-        ds = self.load_raw_ds(None, chunks={'time': 24 * 7})
+        ds = self.load_raw_ds(varlist, chunks={'time': 24 * 7})
         time2 = time.time()
         print('TIME TO LOAD RAW DATASET IN collocate.py : %s s' % (time2 - time1))
         # get unique variables in code:
-        vrs = ds.data_vars
+        #collocate_dataset_allvars()
+
+        #ds_col = collocate_dataset_allvars(ds,  model_name=self.model_name,locations=self.locations)
+        vrs = list(set(ds.data_vars).intersection(set(varlist)))
         for var in vrs:
             print(var)
             print('making station dataset for %s' % var)
@@ -219,11 +237,9 @@ class CollocateModel(Collocate):
                 print('Loading dataset:')
                 ds = self.load_raw_ds(None)  # chunks={'lev':2})
             print('making other dataset')
-            da = collocate_dataset(var, ds, locations=self.locations)
+            print(self.locations)
+            da = collocate_dataset(var, ds, model_name=self.model_name,locations=self.locations)
             ds = da.to_dataset()
-            # ds = xr_fix(da.to_dataset(), model_name=self.model_name)
-            # ds = xr_fix(da.to_dataset(), model_name=self.model_name)
-            # da.to_netcdf(fn)
             print(fn)
             delayed_obj = ds.to_netcdf(fn, compute=False)  # , chunks={'diameter':1})
             print('Saving %s to %s' % (var, fn))
@@ -232,8 +248,67 @@ class CollocateModel(Collocate):
                 delayed_obj.compute()
         return ds
 
+    def make_station_data_merge_monthly(self, varlist):
+        _dr = pd.date_range(self.from_time, self.to_time, freq='MS')[:-1]
+        for d in _dr:
+            ft = d.strftime(format='%Y-%m-%d')
 
-def collocate_dataset(var_name, ds, locations=constants.collocate_locations):
+            tt = (d + pd.DateOffset(months=1)).strftime(format='%Y-%m-%d')
+            print('Running collocate montly')
+            self.collocate_month(ft, tt, varlist)
+            # self.collocate_month(from, varlist, year)
+        for var in varlist:
+            fn = self.savepath_coll_ds(var)
+            print(fn)
+            if os.path.isfile(fn):
+                continue
+            print(f'Concatinating months for {var}:')
+            ds_conc = self.concatinate_months(var)
+
+            delayed_obj = ds_conc.to_netcdf(fn, compute=False)  # , chunks={'diameter':1})
+            print('Saving %s to %s' % (var, fn))
+
+            with ProgressBar():
+                results = delayed_obj.compute()
+        return
+
+    def collocate_month(self, from_t, to_t, varlist, location=None):
+        c = self.get_new_instance(self.case_name, from_t, to_t,
+                                  self.isSectional,
+                                  'hour',
+                                  history_field=self.history_field,
+                                  locations=self.locations)
+        print(f'CHECKING if raw load necessary for {from_t}-{to_t}')
+        if c.check_if_load_raw_necessary(varlist):
+            time1 = time.time()
+            a = c.make_station_data_all(varlist=varlist)
+            time2 = time.time()
+            print(f'Subset {from_t} to {to_t}  done')
+            print('DONE : took {:.3f} s'.format((time2 - time1)))
+
+    def concatinate_months(self, var):
+        ls = []
+        _dr = pd.date_range(self.from_time, self.to_time, freq='MS')[:-1]
+        for d in _dr:
+            from_t = d.strftime(format='%Y-%m-%d')
+            to_t = (d + pd.DateOffset(months=1)).strftime(format='%Y-%m-%d')
+            c = self.get_new_instance(self.case_name, from_t, to_t,
+                                      self.isSectional,
+                                      'hour',
+                                      history_field=self.history_field,
+                                      locations=self.locations)
+            ls.append(c.make_station_da(var))
+        ds_conc = xr.concat(ls, 'time')
+        # remove duplicates in time:
+        ds_conc: xr.Dataset
+        ds_conc = ds_conc.sel(time=~ds_conc.indexes['time'].duplicated())
+        return ds_conc
+
+    def get_new_instance(self, *_vars, **kwargs):
+        return CollocateModel(*_vars, **kwargs)
+
+
+def collocate_dataset(var_name, ds, locations=None, model_name='NorESM'):
     """
     Collocate by method 'nearest' to locations
     :param var_name:
@@ -241,6 +316,8 @@ def collocate_dataset(var_name, ds, locations=constants.collocate_locations):
     :param locations:
     :return:
     """
+    if locations is None:
+        locations = get_locations(model_name)
 
     da = ds[var_name]
     if 'lat' not in da.coords:
@@ -253,6 +330,10 @@ def collocate_dataset(var_name, ds, locations=constants.collocate_locations):
         lat = locations[loc]['lat']
         lon = locations[loc]['lon']
 
+        if lon>180 and da['lon'].max()<=180:
+            print(f'location lon: {lon}. NEEDS TO CONVERT LON to -180,180')
+            lon = (lon + 180) % 360 - 180
+
         ds_tmp[loc] = da.sel(lat=lat, lon=lon, method='nearest', drop=True)
     da_out = ds_tmp.to_array(dim='location', name=var_name)
     for at in da.attrs:
@@ -261,3 +342,43 @@ def collocate_dataset(var_name, ds, locations=constants.collocate_locations):
     del ds_tmp
 
     return da_out
+
+
+def collocate_dataset_allvars(ds, locations=None, model_name='NorESM'):
+    """
+    Collocate by method 'nearest' to locations
+    :param ds:
+    :param locations:
+    :return:
+    """
+    if locations is None:
+        locations = get_locations(model_name)
+
+    if 'lat' not in ds.coords:
+        return ds
+    if 'lon' not in ds.coords:
+        return ds
+    # print(da)
+    ds_tmp = xr.Dataset()
+    list_locations = []
+    for loc in locations:
+        lat = locations[loc]['lat']
+        lon = locations[loc]['lon']
+
+        if lon>180 and ds['lon'].max()<=180:
+            print(f'location lon: {lon}. NEEDS TO CONVERT LON to -180,180')
+            lon = (lon + 180) % 360 - 180
+        ds_sel = ds.sel(lat=lat, lon=lon, method='nearest',drop=True )#.drop(['lat','lon'])
+        #ds_sel = ds_sel.assign_coords(location = [loc])
+        ds_sel = ds_sel.expand_dims('location')
+        ds_sel['location'] = [loc]
+        #ds_sel = ds_sel.assign_coords(location = [loc])
+        list_locations.append(ds_sel)
+    #da_out = ds_tmp.to_array(dim='location', name=var_name)
+
+    ds_out = xr.merge(list_locations)
+    for at in ds.attrs:
+        if at not in ds_out.attrs:
+            ds_out.attrs[at] = ds.attrs[at]
+
+    return ds_out
