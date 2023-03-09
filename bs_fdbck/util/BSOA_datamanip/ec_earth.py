@@ -300,7 +300,7 @@ def extract_cloud_top(ds):
                     .where(ds['cl_frac_where_cltime_pos'] > 0.2)
                     .where(ds['cloud_time_norm'] == 1.)
                     )  #
-    #ds['cumsum'] = ds['cumsum'].where(np.abs(ds['re_liq']-4) > 0.01)
+    # ds['cumsum'] = ds['cumsum'].where(np.abs(ds['re_liq']-4) > 0.01)
 
     ds['argmax'] = ds['cumsum'].fillna(0).argmax('lev', )
 

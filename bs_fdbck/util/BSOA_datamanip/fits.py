@@ -126,7 +126,7 @@ def get_linear_fit(df_s, v_x, v_y, func=func_lin_fit, return_func=False):
     return popt, pcov, label
 
 
-def get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'linear', return_func=False,
+def get_least_square_fit_and_labs(df_s, v_x, v_y, fit_func = 'linear', return_func=False,
                          return_out_obj = False,
                          least_square_kwrgs=None,
                          beta0=None):
@@ -172,8 +172,71 @@ def get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'linear', return_func=False,
             beta0 = [1092,385,-0.26]
 
 
+
+    popt, pcov = get_least_squares_fit(df_s,
+                                       out_func,
+                                       v_x,v_y,
+                                       beta0,
+                                       least_square_kwrgs= least_square_kwrgs)
+    print('Going for least square')
+    label = lab_func(popt)
+    if return_func:
+        return popt, pcov, label, out_func
+
+    return popt, pcov, label
+def get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'linear', return_func=False,
+                         return_out_obj = False,
+                         least_square_kwrgs=None,
+                         beta0=None):
+    if fit_func =='linear':
+        func = target_function_linear
+        out_func = func_lin_fit
+        lab_func = lin_lab
+        #if beta0 is None:
+         #   beta0 = [0,0]
+    if fit_func == 'ax' :
+        func = target_function_ax
+        out_func =  func_ax_fit
+        lab_func = ax_lab
+        #if beta0 is None:
+        #    beta0 = [0]
+    elif fit_func =='exp':
+        func = target_function_exp_fit
+        out_func = func_exp
+        lab_func = exp_lab
+        #if beta0 is None:
+        #    beta0 = [0,0]
+    elif fit_func == 'exp_wc':
+        func = target_function_exp_fit_wc
+        out_func = func_exp_wc
+        lab_func = exp_wc_lab
+        #if beta0 is None:
+        #    beta0 = [0,0,0]
+
+    elif fit_func =='log':
+        func = target_function_log
+        out_func = func_log
+        lab_func = log_lab
+        #if beta0 is None:
+        #    beta0 = [0,0]
+    elif fit_func =='log_abc':
+        func = target_function_log_abc
+        out_func = func_log_abc
+        lab_func = log_abc_lab
+        #if beta0 is None:
+        #    beta0 = [1092,385,-0.26]
+
+
+    ls_popt, ls_pcov = get_least_squares_fit(df_s, out_func, v_x,v_y,beta0, least_square_kwrgs= least_square_kwrgs)
+    if beta0 is None:
+        beta0 = ls_popt
+
+    print(beta0)
+
+    # df_s_norm =(df_s-df_s.mean())/df_s.std()
+
     out = get_odr_fit(df_s, func, v_x, v_y, beta0=beta0)
-    #out.pprint()
+    # out.pprint()
     # lab = 'fit: a=%5.3f, b=%5.3f, c=%5.3f' % tuple(popt))
     # cs = '%5.2f' % popt[-1]
     popt = out.beta
@@ -212,9 +275,10 @@ def get_odr_fit(df_s, func, v_x, v_y, beta0):
     y = _df[v_y].values
     x = _df[v_x].values
     odr_model = odr.Model(func)
-    data = odr.Data(x, y)
+    data = odr.RealData(x=x, y=y, sx=np.std(x), sy=np.std(y))
     ordinal_distance_reg = odr.ODR(data, odr_model,
-                                   beta0=beta0
+                                   beta0=beta0,
+                                   maxit=500,
                                    )
 
     # popt, pcov = odr(func, x, y)
@@ -528,11 +592,16 @@ def get_log_fit_abcmult(df_s, v_x, v_y, func=func_log_abcmult, return_func=False
 
     # plt.plot(x, func_exp(x, *popt), 'r-',
     #     label='fit: %5.3f exp( %5.3f x) +  %5.3f' % tuple(popt))
-def plot_fit(func, popt, mo, xlims, yscale, xscale, ax, label):
 
+def plot_fit(func, popt, mo, xlims, yscale, xscale, ax,label,extra_plot=False, **kwrgs):
     x = np.linspace(*xlims)
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
+    if not extra_plot:
+        ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__', )
+    #     label='fit: %5.3f exp( %5.3f x) +  %5.3f' % tuple(popt))
 
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{label}')
+    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{label}',**kwrgs)
+    #     label='fit: %5.3f exp( %5.3f x) +  %5.3f' % tuple(popt))
+
     ax.set_yscale(yscale)
     ax.set_xscale(xscale)
+

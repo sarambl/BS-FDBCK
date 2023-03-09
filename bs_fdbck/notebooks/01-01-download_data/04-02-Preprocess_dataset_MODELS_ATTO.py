@@ -80,7 +80,7 @@ import datetime
 # ## Read in model data. 
 
 # %%
-model_lev_i=-2
+model_lev_i=-1
 select_station = 'ATTO'
 
 # %%
@@ -88,14 +88,14 @@ postproc_data = path_measurement_data /'model_station'/select_station
 postproc_data.mkdir(parents=True, exist_ok=True)
 
 # %%
-models = ['ECHAM-SALSA','NorESM', 'EC-Earth']
+models = ['ECHAM-SALSA','NorESM', 'EC-Earth', 'UKESM']
 
 di_mod2cases = dict()
 #for mod in models:
 #    di_mod2cases[mod]=dict()
 
 # %% [markdown] tags=[]
-# ## Cases:
+# #### Define dictionaries:
 
 # %%
 dic_mod_ca = dict()
@@ -103,7 +103,7 @@ dic_df_mod_case = dict()
 dic_dfsm_mod_case = dict()
 
 # %% [markdown]
-# ## ECHAM SALSA:
+# ### ECHAM SALSA:
 
 # %%
 from_t = '2012-01-01'
@@ -123,7 +123,7 @@ cases_echam = [case_name]
 di_mod2cases[model_name]=cases_echam
 
 # %% [markdown]
-# ## Variables
+# #### Variables
 
 # %%
 varl =[
@@ -236,8 +236,8 @@ model_name='EC-Earth'
 
 
 case_mod = case_name#'OsloAero_intBVOC_f19_f19_mg17_fssp'
-cases_echam = [case_name]
-di_mod2cases[model_name]=cases_echam
+cases_ec_earth = [case_name]
+di_mod2cases[model_name]=cases_ec_earth
 
 # %% [markdown]
 # #### Variables
@@ -306,7 +306,7 @@ varl_ifs=[
 # #### Read in EC-Earth:
 
 # %% tags=[]
-for case_name in cases_echam:
+for case_name in cases_ec_earth:
     varlist = varl
     c = CollocateLONLATout(case_name, from_t, to_t,
                            True,
@@ -328,7 +328,7 @@ from bs_fdbck.util.BSOA_datamanip.ec_earth import fix_timestamp_ec_earth
 
 # %% tags=[]
 dic_ds = dict()
-for ca in cases_echam:
+for ca in cases_ec_earth:
     c = CollocateLONLATout(ca, from_t, to_t,
                            True,
                            'hour',
@@ -356,6 +356,117 @@ dic_mod_ca['EC-Earth'] = dic_ds.copy()
 # %%
 dic_mod_ca['EC-Earth']['ECE3_output_Sara']
 
+# %%
+# %% [markdown] tags=[]
+# ### UKESM
+
+# %%
+case_name_ukesm = 'AEROCOMTRAJ'
+case_name = case_name_ukesm
+time_res = 'hour'
+space_res = 'locations'
+model_name = 'UKESM'
+
+from_t = '2013-01-01'
+to_t = '2019-01-01'
+
+
+# %% tags=[]
+case_mod = case_name
+cases_ukesm = [case_name]
+di_mod2cases[model_name]=cases_ukesm
+
+# %% [markdown]
+# #### Variables
+
+# %%
+varl = [
+    'Mass_Conc_OM_NS',
+
+    'Mass_Conc_OM_KS',
+    'Mass_Conc_OM_KI',
+    'Mass_Conc_OM_AS',
+    'Mass_Conc_OM_CS',
+    'mmrtr_OM_NS',
+    'mmrtr_OM_KS',
+    'mmrtr_OM_KI',
+    'mmrtr_OM_AS',
+    'mmrtr_OM_CS',
+    'nconcNS',
+    'nconcKS',
+    'nconcKI',
+    'nconcAS',
+    'nconcCS',
+    'ddryNS',
+    'ddryKS',
+    'ddryKI',
+    'ddryAS',
+    'ddryCS',
+    'Temp',
+]
+
+
+# %% [markdown] tags=[]
+# #### Read in UKESM:
+
+# %% tags=[]
+for case_name in cases_ukesm:
+    varlist = varl
+    c = CollocateLONLATout(case_name, from_t, to_t,
+                           True,
+                           'hour',
+                           model_name=model_name
+                           # history_field=history_field
+                           )
+    if c.check_if_load_raw_necessary(varlist ):
+        time1 = time.time()
+        a = c.make_station_data_merge_monthly(varlist)
+        print(a)
+
+        time2 = time.time()
+        print('DONE : took {:.3f} s'.format( (time2-time1)))
+    else:
+        print('UUUPS')
+# %% tags=[]
+dic_ds = dict()
+for ca in cases_ukesm:
+    c = CollocateLONLATout(ca, from_t, to_t,
+                           True,
+                           'hour',
+                           model_name=model_name
+                           )
+    # history_field=history_field)
+
+
+
+
+    ds = c.get_collocated_dataset(varl)
+
+
+    if 'location' in ds.coords:
+        ds = ds.rename({'location':'station'})
+    ds = ds.rename({'model_level':'lev'})
+    dic_ds[ca]=ds.copy()
+
+# %%
+dic_mod_ca['UKESM'] = dic_ds.copy()
+
+# %%
+_ds = dic_mod_ca['UKESM'][case_name_ukesm].sel(station='SMR')
+
+# %%
+
+# %%
+_ds['hour'] = _ds['time.hour']
+_ds
+
+# %%
+f, ax = plt.subplots()
+_ds['nconcNS'].groupby(_ds['hour']).mean().isel(lev= 0).plot(ax = ax)
+ax2 = ax.twinx()
+_ds['nconcAS'].groupby(_ds['hour']).mean().isel(lev= 0).plot(ax = ax2, c='r')
+
+
 # %% [markdown]
 # ### NORESM
 
@@ -377,7 +488,7 @@ from_t2 = '2015-01-01'
 to_t2 = '2019-01-01'
 
 # %% [markdown] tags=[]
-# ## Cases:
+# #### Cases:
 
 # %%
 cases_noresm1 = ['OsloAero_intBVOC_f09_f09_mg17_full']
@@ -388,8 +499,8 @@ case_noresm = 'OsloAero_intBVOC_f09_f09_mg17_fssp'
 cases_noresm = [case_noresm]
 di_mod2cases['NorESM'] = cases_noresm
 
-# %% [markdown]
-# ## Variables
+# %% [markdown] tags=[]
+# #### Variables
 
 # %%
 varl =['N100','SOA_NA','SOA_A1','SO4_NA','DOD500','DOD440','ACTREL',#'TGCLDLWP',
@@ -465,6 +576,9 @@ varl =['N100','DOD500','DOD440','ACTREL',#,'SOA_A1',
       ] 
 
 
+# %% [markdown]
+# #### Read in NorESM
+
 # %% tags=[]
 for case_name in cases_noresm1:
     varlist = varl
@@ -497,8 +611,6 @@ for case_name in cases_noresm2:
         print('DONE : took {:.3f} s'.format( (time2-time1)))
     else:
         print('UUUPS')
-
-# %%
 
 # %% tags=[]
 dic_ds = dict()
@@ -540,10 +652,6 @@ end_y = to_t2.split('-')[0]
 print(st_y, mid_y_t, mid_y_f, end_y)
 
 # %%
-
-# %%
-
-# %%
 _ds1 = ds1.sel(time=slice(st_y, mid_y_t))
 _ds2 = ds2.sel(time=slice(mid_y_f, end_y))
 ds_comb = xr.concat([_ds1, _ds2], dim='time')#.sortby('time')
@@ -580,7 +688,7 @@ for mod in dic_mod_ca.keys():
 
 # %%
 for mod in dic_mod_ca.keys():
-    if mod=='EC-Earth':
+    if mod in ['EC-Earth', 'UKESM']:
         continue
     print(mod)
     for ca in dic_mod_ca[mod].keys():
@@ -588,32 +696,26 @@ for mod in dic_mod_ca.keys():
         print(dic_mod_ca[mod][ca].lev)
         dic_mod_ca[mod][ca].load()
 
+# %%
+for mod in dic_mod_ca.keys():
+    if mod not in ['EC-Earth', 'UKESM']:
+        continue
+    print(mod)
+    lev_i_tm5 = -model_lev_i-1
+    for ca in dic_mod_ca[mod].keys():
+        dic_mod_ca[mod][ca] = dic_mod_ca[mod][ca].isel(lev=lev_i_tm5)
+        if mod=='EC-Earth':
+            dic_mod_ca[mod][ca] = dic_mod_ca[mod][ca].isel(lev_ifs=model_lev_i)
+        dic_mod_ca[mod][ca].load()
+
+
+
+
 # %% [markdown]
 # TM5 has model levels going from the ground and up, IFS from the top and down.
 
-# %%
-mod = 'EC-Earth'
-for ca in dic_mod_ca[mod].keys():
-    # Because model_lev in in neg from above, need to subtract 1 so -1
-    # is equivalent to 0.
-    lev_i_tm5 = -model_lev_i-1
-    dic_mod_ca[mod][ca] = dic_mod_ca[mod][ca].isel(lev=lev_i_tm5)
-    dic_mod_ca[mod][ca] = dic_mod_ca[mod][ca].isel(lev_ifs=model_lev_i)
-    dic_mod_ca[mod][ca].load()
-
-
-# %% [markdown] tags=[]
-# # Functions:
-
-# %%
-R = 287.058
-pressure = 1000. #hPa
-kg2ug = 1e9
-temperature = 273.15
-
-
 # %% [markdown]
-# ## ADJUST ECHAM
+# ## Adjust ECHAM-SALSA
 
 # %%
 rn_dict_echam={
@@ -627,11 +729,13 @@ rn_dict_echam={
 from bs_fdbck.util.BSOA_datamanip import calculate_daily_median_summer,calculate_summer_median, mask4summer,ds2df_echam
 
 # %%
-standard_air_density = 100*pressure/(R*temperature)
 
 # %%
 import datetime
 
+
+# %% [markdown]
+# ### Fix echam time
 
 # %%
 def fix_echam_time(dt):
@@ -647,20 +751,20 @@ def fix_echam_time(dt):
 dic_mod_ca['ECHAM-SALSA'][case_name_echam]
 
 # %%
-standard_air_density = 100*pressure/(R*temperature)
+
+
+
+
+
+# %% [markdown]
+# ### Run ds2df_echam
 
 # %%
-ds_echam = dic_mod_ca['ECHAM-SALSA'][case_name_echam]
-air_dens = ds_echam['apm']/(R*ds_echam['tempair'])
-
-# %%
-ds_echam['apm'].plot.hist(bins=100);
-
-# %%
+from bs_fdbck.util.BSOA_datamanip import pressure_default, standard_air_density,R
 
 df, df_sm = ds2df_echam(dic_mod_ca['ECHAM-SALSA'][case_name_echam], 
                         take_daily_median=False, 
-                        air_density=air_dens,
+                        air_density=standard_air_density,
                         model_lev_i =model_lev_i)
 df.index = df.reset_index()['time'].apply(fix_echam_time)
 df
@@ -668,8 +772,8 @@ df
 # %%
 df['N100'].plot()
 
-# %%
-df['N50'].plot()
+# %% [markdown]
+# ### Save result
 
 # %%
 
@@ -681,14 +785,14 @@ dic_df_mod_case['ECHAM-SALSA']= _di.copy()
 dic_dfsm_mod_case['ECHAM-SALSA'] = _dism.copy()
 
 # %% [markdown]
-# ### Adjust EC-Earth:
+# ## Adjust EC-Earth:
 
 # %%
 ds_ec_earth = dic_mod_ca['EC-Earth'][case_name_ec_earth]
 
 
 # %% [markdown]
-# ## Check all data there:
+# #### Check all data there:
 
 # %%
 from bs_fdbck.util.BSOA_datamanip.ec_earth import rad_vars, num_vars
@@ -704,12 +808,7 @@ for n in rad_vars:
     plt.show()
 
 # %%
-
-# %%
 from bs_fdbck.util.BSOA_datamanip.ec_earth import ds2df_ec_earth
-
-# %%
-ds_ec_earth
 
 # %%
 
@@ -720,11 +819,54 @@ df, df_sm = ds2df_ec_earth(ds_ec_earth,
 #df.index = df.reset_index()['time'].apply(fix_echam_time)
 df
 
+# %% [markdown] tags=[]
+# ### Assuming standard pressure for EC-Earth (since we don't have this and the effect is marginal)
+
+# %% [markdown]
+# Converting by:
+#
+# \begin{align}
+# conc. OA_{amb}=\frac{m_{OA}}{V_{amb}} = & \frac{m_{OA}}{m_{air}} \cdot \frac{m_{air}}{V_{amb}} = w_{OA} \cdot \rho_{amb}
+# \end{align}
+# and in the same way
+# \begin{align}
+# conc. OA_{STP}= & \frac{m_{OA}}{m_{air}} \cdot \frac{m_{air}}{V_{STP}} = w_{OA} \cdot \rho_{STP}
+# \end{align}
+#
+# So finally
+# \begin{align}
+# conc. OA_{STP}= & conc. OA_{amb} \cdot \frac{\rho_{STP}}{\rho_{amb}}
+# \end{align}
+
+# %%
+from bs_fdbck.util.BSOA_datamanip import pressure_default, standard_air_density,R
+
+# %%
+df['T_C']
+
+# %%
+df['density'] = 1e5/(R*(df['T_C']+273.15))
+
+# %%
+df['density'].plot(marker='.')
+
+# %%
+df['ambient2stp_correction_factor'] = (1/df['density'])*standard_air_density
+
+# %%
+vl = ['OA','N100','N200','N50','N500']
+for v in vl:
+    if v in df:
+        df = df.rename({v:f'{v}_amb'}, axis=1)
+        df[f'{v}_STP'] = df[f'{v}_amb']*df['ambient2stp_correction_factor']
+        print(f'converting {v}')
+
 # %%
 df['T_C'].plot(marker='.')#.columns#['Temperature'].plot()
 
 # %%
-df['N50'].plot()#.columns#['Temperature'].plot()
+df['N50_STP'].plot.hist(alpha=0.6, bins=100, density=True)#.columns#['Temperature'].plot()
+df['N50_amb'].plot.hist(alpha=0.6, bins=100, density=True)#.columns#['Temperature'].plot()
 
 # %% [markdown]
 # ### Save result
@@ -738,8 +880,107 @@ _dism = {case_name_ec_earth:df_sm}
 dic_df_mod_case['EC-Earth']= _di.copy()
 dic_dfsm_mod_case['EC-Earth'] = _dism.copy()
 
+# %% [markdown]
+# ## Adjust UKESM:
+
+# %%
+ds_ukesm = dic_mod_ca['UKESM'][case_name_ukesm]
+
+
+# %% [markdown]
+# #### Check all data there:
+
+# %%
+from bs_fdbck.util.BSOA_datamanip.ukesm import diam_vars, num_vars
+
+# %%
+for n in num_vars:
+    ds_ukesm[n].plot()
+    plt.show()
+
+# %%
+for n in diam_vars:
+    ds_ukesm[n].plot()
+    plt.show()
+
+# %%
+from bs_fdbck.util.BSOA_datamanip.ukesm import ds2df_ukesm
+
+# %%
+
+df, df_sm = ds2df_ukesm(ds_ukesm,
+                        take_daily_median=False,
+                        #air_density=air_dens,
+                        model_lev_i =model_lev_i)
+#df.index = df.reset_index()['time'].apply(fix_echam_time)
+df
+
 # %% [markdown] tags=[]
-# ### NorESM
+# ### Assuming standard pressure for UKESM (since we don't have this and the effect is marginal)
+
+# %% [markdown]
+# Converting by:
+#
+# \begin{align}
+# conc. OA_{amb}=\frac{m_{OA}}{V_{amb}} = & \frac{m_{OA}}{m_{air}} \cdot \frac{m_{air}}{V_{amb}} = w_{OA} \cdot \rho_{amb}
+# \end{align}
+# and in the same way
+# \begin{align}
+# conc. OA_{STP}= & \frac{m_{OA}}{m_{air}} \cdot \frac{m_{air}}{V_{STP}} = w_{OA} \cdot \rho_{STP}
+# \end{align}
+#
+# So finally
+# \begin{align}
+# conc. OA_{STP}= & conc. OA_{amb} \cdot \frac{\rho_{STP}}{\rho_{amb}}
+# \end{align}
+
+# %%
+from bs_fdbck.util.BSOA_datamanip import pressure_default, standard_air_density,R
+
+# %%
+df['T_C']
+
+# %%
+df['density'] = 1e5/(R*(df['T_C']+273.15))
+
+# %%
+df['density'].plot(marker='.')
+
+# %%
+df['ambient2stp_correction_factor'] = (1/df['density'])*standard_air_density
+
+# %%
+vl = ['OA','N100','N200','N50','N500']
+for v in vl:
+    if v in df:
+        df = df.rename({v:f'{v}_amb'}, axis=1)
+        df[f'{v}_STP'] = df[f'{v}_amb']*df['ambient2stp_correction_factor']
+        print(f'converting {v}')
+
+# %%
+df['T_C'].plot(marker='.')#.columns#['Temperature'].plot()
+
+# %%
+df['N50_STP'].plot()#.columns#['Temperature'].plot()
+
+# %%
+df['N50_amb'].plot.hist(bins=100, alpha=.5)#.columns#['Temperature'].plot()
+df['N50_STP'].plot.hist(bins=100, alpha=.5)#.columns#['Temperature'].plot()
+
+# %% [markdown]
+# ### Save result
+
+# %%
+
+
+_di = {case_name_ukesm:df}
+_dism = {case_name_ukesm:df_sm}
+
+dic_df_mod_case['UKESM']= _di.copy()
+dic_dfsm_mod_case['UKESM'] = _dism.copy()
+
+# %% [markdown] tags=[]
+# ## Adjust NorESM
 
 # %%
 ds_noresm = dic_mod_ca['NorESM']['OsloAero_intBVOC_f09_f09_mg17_fssp']
@@ -753,12 +994,13 @@ ds_noresm['SOA_A1'].plot.hist(bins=100);
 # %%
 air_dens = ds_noresm['PS']/(R*ds_noresm['T'])
 
-# %%
+# %% [markdown]
+# ### Run ds2df NorESM
 
 # %%
 dic_df = ds2df_inc_preprocessing(dic_mod_ca['NorESM'], 
                                             model_lev_i=model_lev_i, 
-                                            air_density=air_dens,
+                                            air_density=standard_air_density,
                                             select_hours_clouds=False,
                                             mask_cloud_values = False,
 #                   from_hour=8,
@@ -773,6 +1015,58 @@ dic_df = ds2df_inc_preprocessing(dic_mod_ca['NorESM'],
 
 dic_df_mod_case['NorESM'] = dic_df.copy()
 
+# %% [markdown] tags=[]
+# ### NorESM needs correcting only for number concentrations
+
+# %% [markdown]
+# Converting by:
+#
+# \begin{align}
+# conc. OA_{amb}=\frac{m_{OA}}{V_{amb}} = & \frac{m_{OA}}{m_{air}} \cdot \frac{m_{air}}{V_{amb}} = w_{OA} \cdot \rho_{amb}
+# \end{align}
+# and in the same way
+# \begin{align}
+# conc. OA_{STP}= & \frac{m_{OA}}{m_{air}} \cdot \frac{m_{air}}{V_{STP}} = w_{OA} \cdot \rho_{STP}
+# \end{align}
+#
+# So finally
+# \begin{align}
+# conc. OA_{STP}= & conc. OA_{amb} \cdot \frac{\rho_{STP}}{\rho_{amb}}
+# \end{align}
+
+# %%
+from bs_fdbck.util.BSOA_datamanip import pressure_default, standard_air_density,R
+
+# %%
+df = dic_df_mod_case['NorESM'][case_noresm]
+
+# %%
+if 'OA' in df.columns:
+    df = df.rename({'OA':'OA_STP'}, axis=1)
+
+# %%
+pressure = df['PS']
+temperature = df['T_C']
+
+# %%
+df['density'] = pressure/(R*(temperature+273.15))
+
+# %%
+df['density'].plot(marker='.')
+
+# %%
+df['ambient2stp_correction_factor'] = (1/df['density'])*standard_air_density
+
+# %%
+vl = ['N100','N200','N50','N500']
+for v in vl:
+    if v in df:
+        df = df.rename({v:f'{v}_amb'}, axis=1)
+        df[f'{v}_STP'] = df[f'{v}_amb']*df['ambient2stp_correction_factor']
+        print(f'converting {v}')
+
+# %%
+dic_df_mod_case['NorESM'][case_noresm] = df
 
 # %%
 dic_mod_ca['NorESM']['OsloAero_intBVOC_f09_f09_mg17_fssp']['OA'].plot()
@@ -805,7 +1099,29 @@ for mo in models:
         print(dic_df_mod_case[mo][ca].index[0:4])
 
 # %% [markdown]
-# ## Renaming: 
+# ### Compute N50-500 etc.
+
+# %%
+
+# %% tags=[]
+for mo in models:
+    print(mo)
+    for ca in di_mod2cases[mo]:
+        df = dic_df_mod_case[mo][ca]
+        
+        for v in ['N50', 'N100', 'N200']:
+            _v2 = f'{v}_STP'
+            _v2_minus = f'N500_STP'
+            if v in df.columns:
+                df[v + '-500'] = df[v] - df['N500']
+                print(f'computing {v}-500')
+            if _v2 in df.columns:
+                df[f'{v}-500_STP'] = df[_v2]-df[_v2_minus]
+                print(f'computing {v}-500_STP')
+                
+        dic_df_mod_case[mo][ca] = df
+            
+        print(v)
 
 # %% [markdown]
 # #### NorESM
@@ -816,7 +1132,7 @@ rn_dict_echam
 # %%
 df = dic_df_mod_case['NorESM']['OsloAero_intBVOC_f09_f09_mg17_fssp']
 #df = dic_df_mod_case['NorESM']['OsloAero_intBVOC_f19_f19_mg17_fssp']
-df['N50'].plot()
+df['N50_STP'].plot()
 
 # %%
 df['T']
@@ -829,11 +1145,17 @@ for mod in models:
     dic_df_mod_case[mod]
     for ca in dic_df_mod_case[mod].keys():
         print(mod, ca)
-        fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}.csv'
+        if model_lev_i !=-2:
+            fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}_ilev{model_lev_i}.csv'
+        else:
+            fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}.csv'
         print(fn_out)
         dic_df_mod_case[mod][ca].to_csv(fn_out)
 
 # %%
-dic_df_mod_case[mod][ca]['OA']#.plot()
+dic_df_mod_case[mod][ca]['OA_STP']#.plot()
+
+# %%
+pd.read_csv('/proj/bolinc/users/x_sarbl/analysis/BS-FDBCK/Data/model_station/ATTO/ATTO_station_NorESM_OsloAero_intBVOC_f09_f09_mg17_fssp_ilev-1.csv')
 
 # %%

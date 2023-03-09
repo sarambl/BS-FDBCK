@@ -72,7 +72,7 @@ class CollocateLONLATout(CollocateModel):
         # if 'use_pressure_coords' in kwargs.keys():
         kwargs['use_pressure_coords'] = False
         #kwargs['space_res'] = 'locations'
-
+        print(kwargs)
         super().__init__(*_vars, **kwargs)  # , history_field='.h1.')
 
     """

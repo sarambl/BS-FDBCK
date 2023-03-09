@@ -3,6 +3,7 @@ import xarray as xr
 
 
 def prep_sizedist_vars(ds, var_diam='D', v_dNdlog10D='particle_number_size_distribution_amean'):
+
     v_log10D = 'log10D'
     ds[v_log10D] = np.log10(ds[var_diam])
     mid_points = (ds[v_log10D].values[0:-1] + ds[v_log10D].values[1:]) / 2
@@ -43,7 +44,7 @@ def calc_Nx_interpolate_first(ds, x=100,
     ds['log10D'] = np.log10(ds[var_diam])
     ds_log10 = ds.swap_dims({var_diam: 'log10D'})
 
-    ds_log10 = ds_log10.interp({'log10D': np.linspace(ds['log10D'].min(), ds['log10D'].max())})
+    ds_log10 = ds_log10.interp({'log10D': np.linspace(ds['log10D'].min(), ds['log10D'].max(),200)},)
     # print(ds_log10)
     Nx = ds_log10[v_dNdlog10D].sel({'log10D': slice(np.log10(x), None)}).integrate(coord='log10D')
     return Nx

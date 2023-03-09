@@ -198,7 +198,10 @@ varl_st = ['SOA_NA', 'SOA_A1', 'OM_NI', 'OM_AI', 'OM_AC', 'SO4_NA', 'SO4_A1', 'S
            #           'N50-500','N100-500', 'N150-500', 'N200-500',
            # 'OA',
            ]
-varl_st_computed = ['OA', 'T_C', ]
+varl_st_computed= ['OA', 'T_C', 'OA_STP','OA_amb',
+           'N50_STP', 'N100_STP', 'N150_STP', 'N200_STP', 'N500_STP',
+                  
+                  ]
 
 varl_cl = ['TOT_CLD_VISTAU', 'TOT_ICLD_VISTAU', 'TGCLDCWP', 'TGCLDLWP', 'TGCLDIWP',
            'TOT_CLD_VISTAU_s', 'TOT_ICLD_VISTAU_s', 'optical_depth',
@@ -306,7 +309,7 @@ if not fn_comb_lev1_final.exists():
         nbnd=0
     ).squeeze()
     # ds_all = broadcase_station_data(ds_all, lon = lon_smr, lat = lat_smr)
-    ds_all = change_units_and_compute_vars(ds_all, temperature=temperature)
+    ds_all = change_units_and_compute_vars(ds_all, temperature = temperature)
 
     delayed_obj = ds_all.to_netcdf(fn_comb_lev1_final, compute=False)
     print('hey')
@@ -343,10 +346,48 @@ with ProgressBar():
     ds_all.load()
 
 if ds_all['time'].attrs['timezone'] == 'utc':
-    ds_all['time'] = ds_all['time'].to_pandas().index - timedelta(hours=4)
-    ds_all['time'].attrs['timezone'] = 'utc-4'
+    ds_all['time'] = ds_all['time'].to_pandas().index + timedelta(hours=2)
+    ds_all['time'].attrs['timezone'] = 'utc+2'
     print('shifted time by -4')
     # dic_ds[k] = _ds
+
+# %% [markdown] tags=[]
+# #### *Mask if ice water path more than 5% of total water path
+
+# %%
+mask_liq_cloudtop = (ds_all['FCTL']>0.05) & (ds_all['FCTL']/(ds_all['FCTL']+ds_all['FCTI'])>.8)
+
+mask_liq_cloudtop
+ds_all['mask_liq_cloudtop'] = mask_liq_cloudtop
+#ds_all = ds_all.where(mask_liq_cloudtop)
+
+
+# %%
+ds_all['frac_lwp2cwp'] = ds_all['TGCLDLWP']/(ds_all['TGCLDIWP']+ds_all['TGCLDLWP'])
+ds_all['mask_by_lwp2cwp'] = ds_all['frac_lwp2cwp']>0.95
+
+# %%
+ds_all['frac_lwp2cwp'].plot.hist(alpha=0.5,bins=np.linspace(0,1,10))
+
+ds_all['frac_lwp2cwp'].where(ds_all['frac_lwp2cwp']>0.9).plot.hist(alpha=0.5, bins=np.linspace(0,1,10),label='lwp>.9')
+ds_all['frac_lwp2cwp'].where(ds_all['mask_liq_cloudtop']).plot.hist(alpha=0.5, bins=np.linspace(0,1,10), label='liq cloudtop')
+plt.legend()
+
+# %%
+ds_all['FCTL'].where(ds_all['mask_by_lwp2cwp']).plot.hist()
+
+# %%
+ds_all= ds_all.where(ds_all['mask_by_lwp2cwp'])
+
+# %% [markdown]
+# #### * Mask if cloud top fraction of liquid is below 10 %
+
+# %%
+ds_all['FCTL'].where(ds_all['TGCLDCWP_incld']>50).plot(alpha=.5)
+ds_all.where(ds_all['FCTL']>.1)['FCTL'].where(ds_all['TGCLDCWP_incld']>50).plot(alpha=.5)
+
+# %%
+ds_all = ds_all.where(ds_all['FCTL']>.1)
 
 # %% [markdown] tags=[]
 # #### Broadcast computed variables so that only station value is in the gridcells.
@@ -357,6 +398,14 @@ ds_smll = ds_all[['NCONC01']]
 # %%
 ds_comb_station = df_comb_station.to_xarray()
 ds_comb_station = ds_comb_station.assign_coords(station=[select_station])
+
+# %%
+ds_all
+
+# %%
+#ds_all['T_C'].resample(time='hour').mean().plot()
+ds_all['T_C'].sel(lat=lat_smr, lon=lon_smr, method='nearest').groupby(ds_all['time.hour']).mean().plot(c='b')
+ds_comb_station['T_C'].groupby(ds_comb_station['time.hour']).mean().plot(linestyle=':', c='r', linewidth=5)
 
 # %%
 varl_tmp = varl_st + varl_st_computed
@@ -372,6 +421,7 @@ ds_smll = broadcast_vars_in_ds_sel(ds_smll, ds_comb_station, varl_tmp, only_alre
 # %%
 for v in varl_tmp:
     ds_all[v] = ds_smll[v]
+    print(v)
 
 # %% [markdown]
 # ##### Controle plots
@@ -435,7 +485,7 @@ ds_noresm = ds_all.copy()
 for seas in calc_seasons:
     _fn_csv = fn_final_csv_stem.parent / (fn_final_csv_stem.stem + seas + '.csv')
     print(_fn_csv)
-    if not _fn_csv.exists():
+    if True:#not _fn_csv.exists():
         start = timer()
 
         dic_df = get_dic_df_mod(
@@ -461,6 +511,7 @@ for seas in calc_seasons:
         print(f'That is  {((end - start) / 60)} minuts')
 
 # %%
+df_mod.to_xarray()
 
 # %%
 _ds = dic_ds['OsloAero_intBVOC_f09_f09_mg17_fssp245']
@@ -469,6 +520,10 @@ _ds['COT'].sel(time='2012-05-30 02:00:00').plot()
 # %%
 _ds = dic_ds['OsloAero_intBVOC_f09_f09_mg17_fssp245']
 _ds['COT'].sel(time='2012-05-30 23:00:00').plot()
+
+# %%
+_ds = dic_ds['OsloAero_intBVOC_f09_f09_mg17_fssp245']
+_ds['OA_STP'].sel(time='2012-05-30 02:00:00').plot()
 
 # %%
 _ds = dic_ds['OsloAero_intBVOC_f09_f09_mg17_fssp245']
@@ -592,6 +647,9 @@ fl_open = list(set(fl_open))
 # %%
 ds_all = xr.open_mfdataset(fl_open, decode_cf=False)
 
+# %%
+fn_final_echam
+
 # %% tags=[]
 if not fn_final_echam.exists():
     ds_all = xr.open_mfdataset(fl_open, decode_cf=False)
@@ -638,6 +696,9 @@ ds_comb_station = df_comb_station.to_xarray()
 ds_comb_station = ds_comb_station.assign_coords(station=[select_station])
 
 # %%
+fn_final_echam
+
+# %%
 ds_all = xr.open_dataset(fn_final_echam, engine='netcdf4')
 ds_all['time'].attrs['timezone'] = 'utc'
 ds_all['N50'].mean('time').plot()  # .isel(lat=0, time=0).plot()#.shape#.plot()
@@ -678,9 +739,53 @@ ds_all['cwp_incld'].plot(bins=np.linspace(0, 1000, 20), alpha=.5, color='r')
 ds_all['cwp_incld2'] = ds_all['cwp'] / ds_all['cl_clfr_max']
 
 # %%
+ds_all['cod_incld2'] = ds_all['cod'] / ds_all['cl_clfr_max']
+
+# %%
 f, ax = plt.subplots(1)
 ds_all['cwp'].plot.hist(bins=np.logspace(0, 3.1), alpha=.5, ax=ax)
 ds_all['cwp_incld'].plot.hist(bins=np.logspace(0, 3.1), alpha=.5, ax=ax)
+ds_all['cwp_incld2'].plot.hist(bins=np.logspace(0, 3.1), alpha=.5, ax=ax)
+
+# %%
+f, ax = plt.subplots(1)
+ds_all['cwp'].plot.hist(bins=np.linspace(0, 400), alpha=.5, ax=ax)
+ds_all['cwp_incld'].plot.hist(bins=np.linspace(0, 400), alpha=.5, ax=ax)
+ds_all['cwp_incld2'].plot.hist(bins=np.linspace(0,400), alpha=.5, ax=ax)
+
+# %%
+f, ax = plt.subplots(1)
+ds_all['cod'].where(ds_all['cod']>0).plot.hist(bins=np.linspace(0, 40), alpha=.5, ax=ax)
+ds_all['cod_incld'].where(ds_all['cod']>0).plot.hist(bins=np.linspace(0, 40), alpha=.5, ax=ax)
+ds_all['cod_incld2'].where(ds_all['cod']>0).plot.hist(bins=np.linspace(0, 40), alpha=.5, ax=ax)
+
+
+# %%
+ds_all.where(ds_all['cod']>0).plot.scatter(x='cod',y='cod_incld',)
+plt.xlim([0,100])
+plt.ylim([0,100])
+
+
+# %%
+ds_all.where(ds_all['cl_clfr_max']<.4).where(ds_all['cod']>0.1)['cod'].plot.hist(bins=np.arange(100), alpha=.5, density=True)
+ds_all.where(ds_all['cl_clfr_max']>.6).where(ds_all['cod']>0.1)['cod'].plot.hist(bins=np.arange(100), alpha=.5, density=True);
+
+# %%
+ds_all.where(ds_all['cl_time_max']<.8).where(ds_all['cod']>.1)['cod_incld'].plot.hist(bins=np.arange(100), alpha=.5, density=True)
+ds_all.where(ds_all['cl_time_max']>.9).where(ds_all['cod']>.1)['cod_incld'].plot.hist(bins=np.arange(100), alpha=.5, density=True);
+
+# %%
+ds_all.where(ds_all['cl_time_max']<.8).where(ds_all['cod']>.1)['cod_incld2'].plot.hist(bins=np.arange(100), alpha=.5, density=True)
+ds_all.where(ds_all['cl_time_max']>.9).where(ds_all['cod']>.1)['cod_incld2'].plot.hist(bins=np.arange(100), alpha=.5, density=True);
+
+# %%
+ds_all.where(ds_all['cl_time_max']<.8).where(ds_all['cod']>.1)['cod'].plot.hist(bins=np.arange(100), alpha=.5, density=True)
+ds_all.where(ds_all['cl_time_max']>.9).where(ds_all['cod']>.1)['cod'].plot.hist(bins=np.arange(100), alpha=.5, density=True);
+
+# %%
+ds_all.where(ds_all['cod']<ds_all['cod_incld'])['cod_incld'].plot.hist(bins=np.arange(100))#x='cod',y='cod_incld',)
+ds_all.where(ds_all['cod']>=ds_all['cod_incld'])['cod_incld'].plot.hist(bins=np.arange(100),alpha=0.4)#x='cod',y='cod_incld',)
+
 
 # %%
 f, ax = plt.subplots(1)
@@ -690,10 +795,23 @@ ds_noresm['TGCLDCWP_incld'].plot.hist(bins=np.logspace(0, 3.1), alpha=0.5, ax=ax
 plt.xscale('log')
 
 # %% [markdown] tags=[]
-# #### Mask values where cloud time max is less than 10 percent
+# #### *Mask values where cloud time max and cloud top cloud time is less than 10 percent 
+
+# %%
+ds_all['cl_time_max'].plot.hist()
+
+# %%
+ds_all['cl_time_ct'].where(ds_all['cl_time_max']>.2).plot.hist()
+
+# %%
+number_before_mask = ds_all['ceff_ct_incld'].count()
 
 # %%
 ds_all = ds_all.where(ds_all['cl_time_max'] > .1)
+ds_all = ds_all.where(ds_all['cl_time_ct'] > .1)
+
+# %%
+(ds_all['ceff_ct_incld'].count()-number_before_mask)/number_before_mask
 
 # %%
 
@@ -706,9 +824,9 @@ with ProgressBar():
     ds_all.load()
 
 if ds_all['time'].attrs['timezone'] == 'utc':
-    ds_all['time'] = ds_all['time'].to_pandas().index - timedelta(hours=4)
-    ds_all['time'].attrs['timezone'] = 'utc-4'
-    print('shifted time by -4')
+    ds_all['time'] = ds_all['time'].to_pandas().index + timedelta(hours=2)
+    ds_all['time'].attrs['timezone'] = 'utc+2'
+    print('shifted time by 24')
     # dic_ds[k] = _ds
 
 # %% [markdown] tags=[]
@@ -744,6 +862,9 @@ varl_tmp = varl_st_echam + varl_st_computed
 
 varl_tmp = list(set(df_comb_station.columns).intersection(set(varl_tmp)))
 
+# %%
+varl_tmp
+
 # %% tags=[]
 ds_smll = broadcast_vars_in_ds_sel(ds_smll, ds_comb_station, varl_tmp, only_already_in_ds=False)
 
@@ -772,7 +893,10 @@ dic_ds[case_name_echam] = ds_all
 for key in dic_ds:
     dic_ds[key] = dic_ds[key].rename(rn_dic_echam_cloud)
 
-# %% [markdown]
+# %%
+ds_all['OA'].isel(time=10).plot()
+
+# %% [markdown] toc-hr-collapsed=true
 # #### Save final csv
 
 # %%
@@ -1015,7 +1139,7 @@ ds_ifs['cloud_time_norm'].mean('time').plot()
 # #### Masking and computing vars
 
 # %% [markdown] tags=[]
-# ##### Mask values where cloud fraction is less than 10 percent
+# ##### *Mask values where cloud fraction is less than 10 percent
 
 # %%
 xr.set_options(keep_attrs=True)
@@ -1024,10 +1148,10 @@ xr.set_options(keep_attrs=True)
 ds_ifs = ds_ifs.where(ds_ifs['cc_cltop'] > .1)
 
 # %% [markdown] tags=[]
-# ##### Take only values where liquid cloud fraction is above 80%
+# ##### *Mask if ice water path more than 5% of total water path
 
 # %%
-ds_ifs = ds_ifs.where(ds_ifs['liq_frac_cwp'] > .8)
+ds_ifs = ds_ifs.where(ds_ifs['liq_frac_cwp'] > .95)
 
 # %%
 ds_ifs['liq_frac_cwp'].plot()
@@ -1041,9 +1165,9 @@ with ProgressBar():
     ds_ifs.load()
 
 if ds_ifs['time'].attrs['timezone'] == 'utc':
-    ds_ifs['time'] = ds_ifs['time'].to_pandas().index - timedelta(hours=4)
-    ds_ifs['time'].attrs['timezone'] = 'utc-4'
-    print('shifted time by -4')
+    ds_ifs['time'] = ds_ifs['time'].to_pandas().index + timedelta(hours=2)
+    ds_ifs['time'].attrs['timezone'] = 'utc+2'
+    print('shifted time by +2')
     # dic_ds[k] = _ds
 
 # %% [markdown] tags=[]
@@ -1146,7 +1270,9 @@ varl_station_ec_earth = [
 
 # %%
 
-varl_tmp = list(set(df_comb_station.columns).intersection(set(varl_station_ec_earth)))
+# %%
+
+varl_tmp = list(set(df_comb_station.columns).intersection(set(varl_station_ec_earth).union(set(varl_st_computed))))
 
 # %%
 ds_smll = ds_ifs[['temp']]
@@ -1248,5 +1374,11 @@ for seas in calc_seasons:
 
 # %%
 print('Done')
+
+# %%
+
+# %%
+
+# %%
 
 # %%

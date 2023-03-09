@@ -12,69 +12,83 @@
 #     name: python3
 # ---
 
-# %%
-from bs_fdbck.preprocess.launch_monthly_station_collocation_from_full_grid import launch_monthly_station_output_echam
-
-#%load_ext autoreload
-#%autoreload 2
-
-
-
-# %%
-import useful_scit.util.log as log
 import time
 
-from bs_fdbck.util.collocate.collocateLONLAToutput import CollocateLONLATout
-from bs_fdbck.util.collocate.collocate_echam_salsa import CollocateModelEcham
+import useful_scit.util.log as log
+
+from bs_fdbck.preprocess.launch_monthly_station_collocation_from_full_grid import \
+    launch_monthly_station_output_ec_earth, launch_monthly_station_output_ukesm
+
+from IPython import get_ipython
+
 from bs_fdbck.util.collocate.collocate_ukesm import CollocateModelUkesm
 
+# noinspection PyBroadException
+try:
+    _ipython = get_ipython()
+    _magic = _ipython.magic
+    _magic('load_ext autoreload')
+    _magic('autoreload 2')
+except:
+    pass
+# %load_ext autoreload
+# %autoreload 2
+# %%
 log.ger.setLevel(log.log.INFO)
 
-
-
-
-
-
-case_name = 'CRES'
+case_name = 'AEROCOMTRAJ'
 from_time = '2012-01'
 to_time = '2015-01'
 time_res = 'hour'
-space_res='locations'
-model_name='UKESM'
-
-
+space_res = 'locations'
+model_name = 'UKESM'
 
 # %% [markdown]
 # ## Settings:
 
 # %%
-# %%
-from_t = '2012-01-01'
-to_t = '2015-01-01'
-
-
-#from_t = '2015-01-01'
-#to_t = '2019-01-01'
-
+from_t = '2013-01-01'
+to_t = '2019-01-01'
 
 # %% [markdown]
 # ## Cases:
 
 # %%
 cases_orig = [
-    'CRES',
+    case_name,
 ]
-
 # %%
 
-varlist = [#'tempair'
-           'tas',
-           'sfmmroa',
 
-           ]
-#,'vw','uv','ccn10','ccn2','ceff','apm','cod','lcdnc']
-           #"'mmrtrN50','mmrtrN100','mmrtrN200','mmrtrN250','mmrtrN5','ccn02',']# 'SO2_gas']
-#'FREQI',
+varlist = [
+    'Mass_Conc_OM_NS',
+
+    'Mass_Conc_OM_KS',
+    'Mass_Conc_OM_KI',
+    'Mass_Conc_OM_AS',
+    'Mass_Conc_OM_CS',
+    'mmrtr_OM_NS',
+    'mmrtr_OM_KS',
+    'mmrtr_OM_KI',
+    'mmrtr_OM_AS',
+    'mmrtr_OM_CS',
+    'nconcNS',
+    'nconcKS',
+    'nconcKI',
+    'nconcAS',
+    'nconcCS',
+    'ddryNS',
+    'ddryKS',
+    'ddryKI',
+    'ddryAS',
+    'ddryCS',
+    'Temp',
+    'SFisoprene',
+    'SFterpene',
+]
+# ,'vw','uv','ccn10','ccn2','ceff','apm','cod','lcdnc']
+# "'mmrtrN50','mmrtrN100','mmrtrN200','mmrtrN250','mmrtrN5','ccn02',']# 'SO2_gas']
+# 'FREQI',
 
 # %%'cosp_reffice','cosp_reffliq','cosp_tau_modis','cosp_tau',
 
@@ -87,23 +101,17 @@ log.ger.info(f'TIMES:****: {from_t} {to_t}')
 # %%
 
 
-
-import xarray as xr
-
-
-
-# %%
-#for case_name in cases_orig:
-#    launch_monthly_station_output_echam(case_name, from_time=from_t, to_time=to_t)
+for case_name in cases_orig:
+    launch_monthly_station_output_ukesm(case_name, from_time=from_t, to_time=to_t)
 # %% [markdown]
 # ## Merge monthly
 
 for case_name in cases_orig:
     c = CollocateModelUkesm(case_name, from_t, to_t,
-                           False,
-                           'hour',
-                           space_res='locations',
-                           )
+                            False,
+                            'hour',
+                            space_res='locations',
+                            )
     if c.check_if_load_raw_necessary(varlist):
         time1 = time.time()
         print('Running merge monthly: ')
@@ -118,7 +126,6 @@ for case_name in cases_orig:
 # %%
 
 
-
 for case_name in cases_orig:
     c = CollocateModelUkesm(case_name, from_t, to_t, )
     if c.check_if_load_raw_necessary(varlist):
@@ -131,16 +138,7 @@ for case_name in cases_orig:
 
 print('DONE WITH MONTHLY FIELDS!!!!')
 
-# %%
-dic_ds = dict()
-for ca in cases_orig:
-    c = CollocateLONLATout(ca, from_t, to_t,
-                           True,
-                           'hour',
-                           model_name=model_name
-                           )
-    # history_field=history_field)
-    ds = c.get_collocated_dataset(varlist)
+
 # %%
 
 # %% [markdown]

@@ -47,10 +47,10 @@ def xr_fix(dtset, model_name='NorESM', comp='atm'):
         dtset = echam_salsa_fix(dtset)
     elif model_name=='EC-Earth':
 
-        print('NEEED TO IMPLEMENT!!!!')
+        print('No fixes made for EC-Earth')
 
     elif model_name=='UKESM':
-        print('NEEED TO IMPLEMENT!!!!')
+        print('No fixes made for UKESM')
     # get weights:
     if 'lat' in dtset:
         if 'gw' in dtset.data_vars:

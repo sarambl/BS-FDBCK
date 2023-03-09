@@ -208,7 +208,11 @@ def compute_Nx_ebas(ds, x=100, v_dNdlog10D='particle_number_size_distribution_am
     return ds
 
 # %%
-def get_ebas_dataset_with_Nx(x_list=None, station='SMR', path_ebas=None):
+def get_ebas_dataset_with_Nx(x_list = None,
+                             station='SMR',
+                             path_ebas=None,
+                             ds = None,
+                             ):
     """
 
     :param x_list:
@@ -220,10 +224,11 @@ def get_ebas_dataset_with_Nx(x_list=None, station='SMR', path_ebas=None):
     # %%
     if x_list is None:
         x_list = [50, 80, 100, 150, 200, 250, 300]
-    if station == 'ATTO':
-        ds = get_ATTO_sizedist_data( path_ebas=path_ebas)
-    else:
-        ds = get_station_ebas_data(station=station, path_ebas=path_ebas)
+    if ds is None:
+        if station == 'ATTO':
+            ds = get_ATTO_sizedist_data( path_ebas=path_ebas)
+        else:
+            ds = get_station_ebas_data(station=station, path_ebas=path_ebas)
     # %%
     for x in x_list:
         Nx = calc_Nx_interpolate_first(ds,

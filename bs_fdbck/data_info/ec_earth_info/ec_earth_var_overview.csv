@@ -23,7 +23,7 @@ var164,ttc,ttc,Total cloud cover,1,
 var20,cdnc,cdnc,Cloud Droplet Number Concentration,cm-3,"""Note that CDNC needs to be converted to the correct unit in a post-processing"""
 var21,re_liq,re_liq, effective radius liquid, um,
 var22,liq_cloud_time,liq_cloud_time, cloud time,sec,
-var130,temp,temp,Temperature,K,
+var130,temp,temp,Temperature,K
 var131,U,U,u wind component,m/s,
 var132,V,V,v wind component,m/s,
 var167,t2,t2,2m Temperature,K,

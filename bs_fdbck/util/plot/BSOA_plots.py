@@ -28,10 +28,10 @@ cols = [
 
 
 cdic_model = {
-    'NorESM': '#d8651e', ##d26f1a',##9d134b',
-    'ECHAM-SALSA':'#0476b2', #6e75c0',##f6a90d',# '#36AE7C',
-    'EC-Earth':'#e6a01c', ##6e75c0',#f6a90d',
-    'UKESM':'#2a9e76', #f24a4a',##f24a5f',#2a717e',
+    'NorESM': '#e41a1c',#'#fc8d62',#'#d8651e', ##d26f1a',##9d134b',
+    'ECHAM-SALSA':'#377eb8',#'#66c2a5',#'#0476b2', #6e75c0',##f6a90d',# '#36AE7C',
+    'UKESM':'#984ea3',##4daf4a',#'#e78ac3',##e6a01c', ##6e75c0',#f6a90d',
+    'EC-Earth':'#ff7f00',#'#2a9e76', #f24a4a',##f24a5f',#2a717e',
     'Observations':'k',
 
 }
@@ -353,6 +353,7 @@ def fix_ax_labs(axs, x=True, y=True):
 
 
 def make_cool_grid5(figsize=None,
+                    fig = None,
                     width_ratios=None,
                     ncols=1,
                     nrows=1,
@@ -388,24 +389,31 @@ def make_cool_grid5(figsize=None,
         add_gs_kw['hspace'] = 0
     if 'wspace' not in add_gs_kw.keys():
         add_gs_kw['wspace'] = 0
-
-    fig = plt.figure(figsize=figsize,
+    if fig is None:
+        fig = plt.figure(figsize=figsize,
                      dpi=100)
 
     w_r1 = [size_big_plot,size_big_plot*frac_dist_axis_from_big]
     h_r1 = [frac_dist_axis_from_big,1, ]
+    width_ratio_big_small = [size_big_plot+width_dist_ax,width_small_plot]
+    height_ratio_big_small = [size_big_plot+width_dist_ax,width_small_plot]
+    # Big plot:
 
-    gs0 = gridspec.GridSpec(2, 2, figure=fig, height_ratios= [size_big_plot+width_dist_ax,width_small_plot],
-                            width_ratios = [size_big_plot+width_dist_ax,width_small_plot])
+    gs0 = gridspec.GridSpec(2, 2, figure=fig, height_ratios= height_ratio_big_small,
+                            width_ratios = width_ratio_big_small)
 
     gs00 = gridspec.GridSpecFromSubplotSpec(nrows+1, ncols+1, width_ratios=w_r1, height_ratios=h_r1, subplot_spec=gs0[0,0], **add_gs_kw)
     # for the small plots:
     gs01 = gridspec.GridSpecFromSubplotSpec(num_subplots_per_big_plot+1,1, subplot_spec=gs0[:,1])#, **add_gs_kw)
-    gs03 = gridspec.GridSpecFromSubplotSpec(1,num_subplots_per_big_plot, subplot_spec=gs0[1,:1])#, **add_gs_kw)
+    gs03 = gridspec.GridSpecFromSubplotSpec(1,num_subplots_per_big_plot,  subplot_spec=gs0[1,:1])#, **add_gs_kw)
 
     axs = gs00.subplots(sharex=sharex, sharey=sharey, )
     axs_extra = gs01.subplots(sharex=sharex, sharey=sharey, )
     axs_extra2 = gs03.subplots(sharex=sharex, sharey=sharey, )
+
+    ###
+
+    ###
     axs_extra = np.concatenate((axs_extra, axs_extra2,))
     axs[0,1].clear()
     axs[0,1].axis("off")

@@ -237,45 +237,9 @@ ds_smr_sat_JAs['OA (microgram m^-3)'].plot()
 #['Org']
 
 # %%
-1-.33333
+dic_OA_percentiles = dict()
 
 # %%
-ds_smr_sat_JAs.to_dataframe().dropna()['OA (microgram m^-3)'].quantile([0.3333333,.66666666]).values
-
-# %%
-[perc_33, perc_66] = ds_smr_sat_JAs.to_dataframe().dropna()['OA (microgram m^-3)'].quantile([0.3333333,.66666666]).values
-
-# %%
-perc_33
-
-# %%
-perc_66
-
-# %% tags=[]
-#df_hyy_1['OA_category']
-
-ds_smr_sat_JAs['OA_low']= ds_smr_sat_JAs['OA (microgram m^-3)']<perc_33
-ds_smr_sat_JAs['OA_high']= ds_smr_sat_JAs['OA (microgram m^-3)']>perc_66
-
-df_smr_sat_JAs = ds_smr_sat_JAs.to_dataframe()
-
-df_smr_sat_JAs=df_smr_sat_JAs.assign(OA_category= pd.NA)
-df_smr_sat_JAs.loc[df_smr_sat_JAs['OA_high'], 'OA_category'] = 'OA high'
-df_smr_sat_JAs.loc[df_smr_sat_JAs['OA_low'], 'OA_category'] = 'OA low'
-
-#ds_smr_sat_JAs['OA_category'][ds_smr_sat_JAs['OA_high']] = 'OA high'
-
-# %% tags=[]
-ds_smr_sat_JAs['OA_category']=df_smr_sat_JAs.to_xarray()['OA_category']
-
-# %%
-ds_smr_sat_JAs['OA_low'].where(ds_smr_sat_JAs['OA_low']).to_dataframe().dropna().count()
-
-# %%
-ds_smr_sat_JAs['OA_low'].where(ds_smr_sat_JAs['OA_low']).to_dataframe().dropna().count()
-
-# %%
-ds_smr_sat_JAs['OA_high'].to_dataframe().dropna().count()
 
 # %%
 _df = ds_smr_sat_JAs.drop('band').to_dataframe().reset_index().rename({'LAT':'lat','LON':'lon'},axis=1)#.dropna()#()
@@ -284,84 +248,6 @@ df_hyy_1 = _df.sort_values(['lat','lon']).set_index(['time','lat','lon'])
 
 # %%
 df_hyy_1
-
-# %% [markdown]
-# #### Original binning from Yli-Juuti et al:
-
-# %%
-bins = pd.IntervalIndex.from_tuples([(60, 100), (100, 140), (140, 180), (180, 220), (220, 260), (260, 300), (300, 340)])
-
-labels=[ 80, 120, 160, 200, 240, 280, 320]
-
-df_hyy_1['CWP_cut']=pd.cut(df_hyy_1['CWP (g m^-2)'], bins=bins, labels=labels)
-# label for each bin
-df_hyy_1['CWP_cutl'] = df_hyy_1['CWP_cut'].apply(lambda x:x.mid)
-
-
-# %% [markdown]
-# #### Quantile binning
-
-# %%
-df_hyy_1['CWP (g m^-2)'].dropna()
-
-# %%
-df_hyy_1['CWP_qcut']=pd.qcut(df_hyy_1['CWP (g m^-2)'], 7)#bins=bins, labels=labels)
-df_hyy_1['CWP_qcutl'] = df_hyy_1['CWP_qcut'].apply(lambda x:x.mid)
-# Label by median in each bin
-di = dict(df_hyy_1.groupby('CWP_cut').median()['CWP (g m^-2)'])
-for k in di.keys():
-    di[k] = int(np.round(di[k]))
-df_hyy_1['CWP_cutlm'] = df_hyy_1['CWP_cut'].apply(lambda x:di[x])
-
-# %% [markdown] tags=[]
-# #### Bin from 5th to 95th quantile of CWP and label by median in each bin or just number
-
-
-# %%
-n_bins = 6
-labels = np.arange(n_bins)
-
-qants = df_hyy_1['CWP (g m^-2)'].quantile([.0,.90])
-
-bins2 = pd.interval_range(qants.iloc[0], qants.iloc[1], periods=n_bins)
-
-bins2.values[-1] = pd.Interval(bins2[-1].left,np.inf)
-bins2.values[0] = pd.Interval(0,bins2[0].right)
-
-
-df_hyy_1['CWP_cut2']=pd.cut(df_hyy_1['CWP (g m^-2)'], bins=bins2, labels=labels)
-
-
-di_per_lab = {bins2[i]:labels[i] for i in range(len(labels))}
-
-df_hyy_1['CWP_cut2l'] = df_hyy_1['CWP_cut2'].apply(lambda x:di_per_lab[x])
-
-
-di = dict(df_hyy_1.groupby('CWP_cut2').median()['CWP (g m^-2)'])
-for k in di.keys():
-    di[k] = int(np.round(di[k]))
-df_hyy_1['CWP_cut2lm'] = df_hyy_1['CWP_cut2'].apply(lambda x:di[x])
-#di = dict(df_hyy_1.groupby('CWP_cut2').mid)
-#for k in di.keys():
-#    di[k] = int(np.round(di[k]))
-df_hyy_1['CWP_cut2lmid'] = df_hyy_1['CWP_cut2'].apply(lambda x:np.round(x.mid))
-
-
-#df_hyy_1['CWP_cut2lmid'] = df_hyy_1['CWP_cut2'].apply(lambda x:x.mid)
-
-
-# %%
-df_hyy_1['OA (microgram m^-3)'][df_hyy_1['OA_low']].plot.hist(bins=50, alpha=0.4, label='obs')
-
-
-
-#df_hyy_1_old['OA (microgram m^-3)'][df_hyy_1_old['OA_low']].plot.hist(bins=50, alpha=0.4, label='obs')
-
-
-
-# %%
-vs =['OA (microgram m^-3)', 'CWP (g m^-2)', 'CER (micrometer)', 'COT',
-       'OA_low', 'OA_high', 'OA_category']
 
 # %% [markdown] tags=[]
 # df_smr_sat_JAsad model data:
@@ -552,11 +438,64 @@ dic_df[model_name_noresm] = df_mod_noresm
 dic_df[model_name_ec_earth] = df_mod_ec_earth
 dic_df['Observations'] = df_hyy_1
 
+
+
+
+# %% [markdown] tags=[]
+# ## Rename variables:
+#
+
+# %%
+rn_dic_echam = {
+    #'cwp'      : 'CWP',
+   # 'cwp_incld'      : 'CWP',
+   # 'cod'      : 'COT',
+    #'ceff_ct'  : 'r_eff',
+   # 'ceff_ct_incld'  : 'r_eff',
+    
+
+}
+rn_dic_noresm = {
+    'TGCLDLWP_incld'         : 'CWP',
+    'TOT_CLD_VISTAU_s_incld': 'COT',
+    'ACTREL_incld'     : 'r_eff',
+}
+rn_dic_obs = {
+    'CWP (g m^-2)'        : 'CWP',
+    'CER (micrometer)'    : 'r_eff',
+    'OA (microgram m^-3)' : 'OA',
+    
+}
+rn_dic_ec_earth = {
+    'OA_STP':'OA'
+}
+
+
+# %%
+for key, rn in zip([model_name_noresm, model_name_echam, model_name_ec_earth,'Observations'], 
+                   [rn_dic_noresm, rn_dic_echam,rn_dic_ec_earth, rn_dic_obs]):
+    dic_df[key] = dic_df[key].rename(rn, axis=1)
+
+# %% [markdown] tags=[]
+# ## Group by cloud water path 
+
+# %% [markdown]
+# #### Predefined bins
+
+# %%
+dic_bins = dict()
+dic_bins[model_name_noresm] = pd.IntervalIndex.from_breaks([   50,  80,  110, 140, 170, 200,230, 500])
+dic_bins[model_name_echam] = pd.IntervalIndex.from_breaks([   50,  80,  110, 140, 170, 200,230, 500])
+dic_bins[model_name_ec_earth] = pd.IntervalIndex.from_breaks([   50,  80,  110, 140, 170, 200,230, 500])
+
+
+
+
 # %% [markdown]
 # ## Mask data
 
 # %% [markdown] tags=[]
-# ### NorESM: Masking if less than 5% liquid cloud top fraction and if liquid is less than 80% of the cloud top 
+# ### NorESM: Masking if less than 5% liquid cloud top fraction and if liquid is less than 80% of the cloud top
 
 # %%
 df_mod = dic_df[model_name_noresm]
@@ -579,58 +518,9 @@ _df = dic_df[model_name_ec_earth]
 
 if 'scaled' not in _df.columns:
     _df['CWP'] = _df['CWP_orig']*.7
-    
+
     _df['scaled'] = True
 dic_df[model_name_ec_earth]  = _df
-
-# %% [markdown] tags=[]
-# ## Rename variables:
-#
-
-# %%
-rn_dic_echam = {
-    #'cwp'      : 'CWP',
-   # 'cwp_incld'      : 'CWP',
-   # 'cod'      : 'COT',
-    #'ceff_ct'  : 'r_eff',
-   # 'ceff_ct_incld'  : 'r_eff',
-    
-    
-}
-rn_dic_ec_earth = {
-    
-  # 'tclw':'CWP',
-}
-rn_dic_noresm = {
-    'TGCLDCWP_incld'         : 'CWP',
-    'TOT_CLD_VISTAU_s_incld': 'COT',
-    'ACTREL_incld'     : 'r_eff',
-}
-rn_dic_obs = {
-    'CWP (g m^-2)'        : 'CWP',
-    'CER (micrometer)'    : 'r_eff',
-    'OA (microgram m^-3)' : 'OA',
-    
-}
-
-
-
-# %%
-for key, rn in zip([model_name_noresm, model_name_echam, model_name_ec_earth,'Observations'], 
-                   [rn_dic_noresm, rn_dic_echam,rn_dic_ec_earth, rn_dic_obs]):
-    dic_df[key] = dic_df[key].rename(rn, axis=1)
-
-# %% [markdown] tags=[]
-# ## Group by cloud water path 
-
-# %% [markdown]
-# #### Predefined bins
-
-# %%
-dic_bins = dict()
-dic_bins[model_name_noresm] = pd.IntervalIndex.from_breaks([   50,  80,  110, 140, 170, 200,230, 500])
-dic_bins[model_name_echam] = pd.IntervalIndex.from_breaks([   50,  80,  110, 140, 170, 200,230, 500])
-dic_bins[model_name_ec_earth] = pd.IntervalIndex.from_breaks([   50,  80,  110, 140, 170, 200,230, 500])
 
 
 # %% [markdown]
@@ -642,35 +532,52 @@ dic_bins[model_name_ec_earth] = pd.IntervalIndex.from_breaks([   50,  80,  110, 
 varl_categories = ['OA']#,'CLDFREE']
 
 # %%
-varl_categories
+varlist_notna = ['OA','CWP','COT','r_eff']
+varlist_notna_noCOT = set(varlist_notna)-set(['COT'])
 
 # %%
 dic_df.keys()
-
-# %% tags=[]
-dic_df['EC-Earth'][['CWP']]
-
-# %%
 ds_ec = dic_df['EC-Earth']#.to_xarray()
 
 # %%
 ds_no = dic_df['NorESM'].to_xarray()
 
-# %%
-7*12/(10*22)
-
-# %%
-
-# %%
-ds_no
-
 # %% tags=[]
 n_bins = 6
 
-for model_name in models:
+for model_name in dic_df.keys():
+
     print(model_name)
     df_mod = dic_df[model_name]
-    
+    ## drop nans:
+    if model_name =='EC-Earth':
+        _vl = varlist_notna_noCOT
+    else:
+        _vl = varlist_notna
+    df_mod = df_mod[_vl].dropna()
+
+
+    for v in varl_categories:
+        q34 = df_mod[v].quantile(.3333333)
+        print(q34)
+
+        q66 = df_mod[v].quantile(.6666666)
+        print(q66)
+        if v=='OA':
+            dic_OA_percentiles[model_name]=dict()
+            dic_OA_percentiles[model_name]['33rd']=q34
+            dic_OA_percentiles[model_name]['66th']=q66
+            dic_OA_percentiles[model_name]['med_high']= df_mod[v][df_mod[v]>q66].median()
+            dic_OA_percentiles[model_name]['med_low']= df_mod[v][df_mod[v]<q34].median()
+
+
+        df_mod[f'{v}_low'] = df_mod[v]<q34
+        df_mod[f'{v}_high']= df_mod[v]>q66
+        mid_range = ( df_mod[v].quantile(.34)<df_mod[v]) & (df_mod[v]<df_mod[v].quantile(.66))
+        df_mod[f'{v}_mid_range'] = mid_range
+        df_mod=df_mod.assign(**{f'{v}_category': pd.NA})
+        df_mod.loc[df_mod[f'{v}_high'], f'{v}_category'] = f'{v} high'
+        df_mod.loc[df_mod[f'{v}_low'], f'{v}_category'] = f'{v} low'
 
     bins = dic_bins[model_name]
     df_mod['CWP_cut']=pd.cut(df_mod['CWP'], bins=bins)#, labels=labels)
@@ -704,21 +611,22 @@ for model_name in models:
     #    di[k] = int(np.round(di[k]))
     df_mod['CWP_cut2lmid'] = df_mod['CWP_cut2'].apply(lambda x:np.round(x.mid))
     
-    for v in varl_categories:
-        q34 = df_mod[v].quantile(.3333333)
-        print(q34)
-        
-        q66 = df_mod[v].quantile(.6666666)
-        print(q66)
-        df_mod[f'{v}_low'] = df_mod[v]<q34
-        df_mod[f'{v}_high']= df_mod[v]>q66
-        mid_range = ( df_mod[v].quantile(.34)<df_mod[v]) & (df_mod[v]<df_mod[v].quantile(.66))
-        df_mod[f'{v}_mid_range'] = mid_range
-        df_mod=df_mod.assign(**{f'{v}_category': pd.NA})
-        df_mod.loc[df_mod[f'{v}_high'], f'{v}_category'] = f'{v} high'
-        df_mod.loc[df_mod[f'{v}_low'], f'{v}_category'] = f'{v} low'
-        dic_df[model_name] = df_mod
+    dic_df[model_name] = df_mod
 
+
+# %%
+OA_percentile_df = pd.DataFrame(dic_OA_percentiles).T
+OA_percentile_df['diff'] = OA_percentile_df['66th']- OA_percentile_df['33rd']
+
+fn = make_fn('percentile_OA', 'OA','perc').with_suffix('.csv')
+OA_percentile_df.to_csv(fn)
+
+print(fn)
+OA_percentile_df
+
+
+# %%
+OA_percentile_df
 
 # %% [markdown]
 # ## Quantile cut
@@ -758,7 +666,7 @@ v_x = 'COT'
 x_cut = 100
 v_hue = 'OA_category'
 hue_order=['OA low', 'OA high'][::-1]
-
+_bins = np.linspace(0,50)
 _palette = palette_OA#cmap_list[0:2]
 
 
@@ -776,7 +684,8 @@ for key, ax in zip(dic_df.keys(), axs):
         palette=_palette,
         legend=False,
         edgecolor='w',
-        ax = ax
+        ax = ax,
+        bins=_bins,
     )
 #plt.ylim([0,250])
     ax.set_title(key)#'Observations')
@@ -813,18 +722,13 @@ fig.savefig(fn.with_suffix('.pdf'), dpi=150)
 
 
 # %%
-
-
-
-
-# %%
 fig, axs = plt.subplots(4,1, sharex=True, figsize =[6,6])
-_bins = np.linspace(0,400)
+
 v_x = 'CWP'
 x_cut = 500
 v_hue = 'OA_category'
 hue_order=['OA low', 'OA high'][::-1]
-
+_bins = np.linspace(20,500)
 _palette = palette_OA#cmap_list[0:2]
 
 
@@ -890,7 +794,7 @@ v_y = 'COT'
 x_cut = 500
 v_hue = 'OA_category'
 hue_order=['OA low', 'OA high'][::-1]
-
+_bins = np.linspace(0,35)
 _palette = palette_OA#cmap_list[0:2]
 
 
