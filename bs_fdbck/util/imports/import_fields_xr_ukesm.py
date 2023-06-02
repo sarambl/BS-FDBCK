@@ -7,7 +7,7 @@ import useful_scit.util.log as log
 import xarray as xr
 
 from bs_fdbck import constants
-from bs_fdbck.util.BSOA_datamanip.ukesm import ukesm_var_overview
+from bs_fdbck.util.BSOA_datamanip.ukesm import ukesm_var_overview, get_rndic_ukesm
 
 xr.set_options(keep_attrs=True)
 
@@ -109,22 +109,28 @@ def xr_import_ukesm(case,
 
 
 def get_pathlist_and_rndic_ukesm(from_time_dt, path_raw_data, to_time_dt, varlist):
-    rename_dic = {}
-    dic_varname2file = {}
+    # %%
+    #rename_dic = {}
+    #dic_varname2file = {}
     pathfile_list = []
+    rename_dic, dic_varname2file = get_rndic_ukesm(varlist)
+
     for v in varlist:
         if v in ukesm_var_overview.index:
             df_out = filelist_ukesm(v, from_time_dt, to_time_dt, path_raw_data)
 
             fl_open = list(df_out['path'])
             pathfile_list += fl_open
-            file_name_var = ukesm_var_overview.loc[v, 'var_name_infile']
-            var_in_filename = ukesm_var_overview.loc[v, 'orig_var_name_file']
-            new_var_name = v
-            rename_dic[file_name_var] = new_var_name
-            dic_varname2file[new_var_name] =var_in_filename
+            #file_name_var = ukesm_var_overview.loc[v, 'var_name_infile']
+            #var_in_filename = ukesm_var_overview.loc[v, 'orig_var_name_file']
+            #new_var_name = v
+            #rename_dic[file_name_var] = new_var_name
+            #dic_varname2file[new_var_name] =var_in_filename
+            print(v)
+    # %%
     return pathfile_list, rename_dic, dic_varname2file
 
+# %%
 
 # %%
 
@@ -133,6 +139,16 @@ def get_pathlist_and_rndic_ukesm(from_time_dt, path_raw_data, to_time_dt, varlis
 def filelist_ukesm(var, from_time_dt, to_time_dt, path_raw_data):
     file_name_var = ukesm_var_overview.loc[var, 'orig_var_name_file']
     relm = ukesm_var_overview.loc[var, 'relm']
+    if type(relm) is not str:
+        p = path_raw_data
+
+        fl = list(p.glob(f'*{file_name_var}*.nc'))
+        df_fl = pd.DataFrame(fl, columns=['path'])
+        df_fl['filename'] = df_fl['path'].apply(lambda x: x.name)
+        df_fl = df_fl.sort_index(ascending=True)
+        df_out = df_fl.copy()
+        return df_out
+
     p = path_raw_data / relm
     fl = list(p.glob(f'*{file_name_var}*.nc'))
     df_fl = pd.DataFrame(fl, columns=['path'])

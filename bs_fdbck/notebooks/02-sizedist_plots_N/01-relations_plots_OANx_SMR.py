@@ -50,6 +50,20 @@ import xarray as xr
 import matplotlib.pyplot as plt
 
 # %%
+import scienceplots
+import scienceplots
+plt.style.use([
+    'default',
+    # 'science',
+    'acp',
+    # 'sp-grid',
+    'no-black',
+    'no-latex',
+    'illustrator-safe'
+])
+
+
+# %%
 
 # %%
 
@@ -103,10 +117,12 @@ def make_fn_eval(case,_type):
 # ## Read in model data. 
 
 # %% tags=[]
-models = ['ECHAM-SALSA','NorESM', 'EC-Earth']
+models = ['ECHAM-SALSA','NorESM', 'EC-Earth', 'UKESM']
 mod2cases = {'ECHAM-SALSA' : ['SALSA_BSOA_feedback'],
              'NorESM' : ['OsloAero_intBVOC_f09_f09_mg17_fssp'],
              'EC-Earth' : ['ECE3_output_Sara'],
+             'UKESM' : ['AEROCOMTRAJ'],
+             'Observations':['Obs'],
             }
 di_mod2cases = mod2cases.copy()
 
@@ -162,8 +178,6 @@ for mod in models:
         dic_df_pre[mod][ca].index = pd.to_datetime(dic_df_pre[mod][ca].index)
         #dic_df_mod_case[mod][ca].to_csv(fn_out)
 
-# %%
-
 # %% [markdown]
 # ## Read in observations
 
@@ -171,7 +185,10 @@ for mod in models:
 df_obs = pd.read_csv(fn_obs_comb_data_full_time,index_col=0)
 
 # %%
-df_obs = df_obs.rename({'Org':'OA', 'HYY_META.T168':'T_C'}, axis=1)
+df_obs = df_obs.rename({'Org_STP':'OA', 'HYY_META.T168':'T_C'}, axis=1)
+
+# %%
+df_obs
 
 # %%
 dic_df_pre['Observations']=dict()
@@ -209,33 +226,24 @@ def select_months(df, season = None, month_list=None):
 # ### Some definitions:
 
 # %%
-models = ['EC-Earth','ECHAM-SALSA','NorESM']
+models = ['ECHAM-SALSA','NorESM', 'EC-Earth', 'UKESM']
+mod2cases = {'ECHAM-SALSA' : ['SALSA_BSOA_feedback'],
+             'NorESM' : ['OsloAero_intBVOC_f09_f09_mg17_fssp'],
+             'EC-Earth' : ['ECE3_output_Sara'],
+             'UKESM' : ['AEROCOMTRAJ'],
+             'Observations':['Obs'],
+            }
+di_mod2cases = mod2cases.copy()
 
-
-# %%
-dic_mod2case={
-
-}
 
 # %% [markdown]
 # ### Save result in dictionary
 
 # %%
-dic_df_mod_case = di_mod2cases
-for mo in models:
-    cs = mod2cases[mo]
-    for c in cs: 
-        if len(cs)>1:
-            use_name = f'{mo}_{c}'
-        else:
-            use_name =mo
-
-
-# %%
 dic_df_mod_case = dic_mod_ca.copy()
 
 # %%
-from bs_fdbck.util.BSOA_datamanip import calculate_daily_median_summer,calculate_summer_median, ds2df_ukesm
+from bs_fdbck.util.BSOA_datamanip import calculate_daily_median_summer,calculate_summer_median
 
 # %%
 
@@ -246,8 +254,8 @@ print(mo)
 mask_months = select_months(df_s1, season=season)
 df_s1 = df_s1[mask_months].copy()
 print(len(df_s1.dropna()))
-df_s1['N50'].plot(marker='.', linewidth=0, c='r')
-df_s1.resample('D').median()['N50'].plot(marker='.', linewidth=0, c='b')
+df_s1['N50_STP'].plot(marker='.', linewidth=0, c='r')
+df_s1.resample('D').median()['N50_STP'].plot(marker='.', linewidth=0, c='b')
 
 
 # %%
@@ -259,8 +267,8 @@ print(mo)
 mask_months = select_months(df_s1, season=season)
 df_s1 = df_s1[mask_months].copy()
 print(len(df_s1.dropna()))
-df_s1['N50'].plot(marker='.', linewidth=0, c='r')
-df_s1.resample('D').median()['N50'].plot(marker='.', linewidth=0, c='b')
+df_s1['N50_STP'].plot(marker='.', linewidth=0, c='r')
+df_s1.resample('D').median()['N50_STP'].plot(marker='.', linewidth=0, c='b')
 
 
 # %%
@@ -273,6 +281,22 @@ df_s1.to_xarray()
 dic_df_pre = dict()#dic_df_mod_case.copy()#deep=True)
 for mod in dic_df_mod_case.keys():
     dic_df_pre[mod] = dic_df_mod_case[mod].copy()
+
+# %%
+
+# %% [markdown]
+# ## Rename STP values
+
+# %%
+for mod in models:
+    for ca in mod2cases[mod]:
+        _df = dic_df_pre[mod][ca]
+        for v in ['OA','N50','N100','N200']:
+            if f'{v}_STP' in _df.columns:
+                if v in _df.columns:
+                    _df = _df.rename({v:f'{v}_orig'}, axis=1)
+                _df = _df.rename({f'{v}_STP':v}, axis=1)
+        dic_df_pre[mod][ca] = _df
 
 # %%
 vars_obs = ['OA', 'N100','N50','N200','T_C']
@@ -293,18 +317,12 @@ for mod in dic_df_mod_case.keys():
         dic_df_mod_case[mod][ca] = pd.merge(dic_df_pre[mod][ca], df_for_merge ,right_on='time', left_on='time', how='outer')
         dic_df_mod_case[mod][ca]['year'] = dic_df_mod_case[mod][ca].index.year
 
-# %%
-df_obs_rename = df_obs.rename({'Org':'OA','temperature':'T_C'}, axis=1)
-
-# %%
-df_obs_rename
-
 # %% [markdown]
 # ## Add observations to dictionary
 
 # %%
 dic_df_mod_case['Observations'] = dict()
-dic_df_mod_case['Observations']['Observations'] = df_obs_rename
+dic_df_mod_case['Observations']['Observations'] = df_obs
 
 # %%
 dic_df_mod_case['Observations'].keys()
@@ -329,10 +347,11 @@ def add_log(df, varl=None):
 for mod in dic_df_mod_case.keys():
     for c in dic_df_mod_case[mod].keys():
     
-        dic_df_mod_case[mod][c] = add_log(dic_df_mod_case[mod][c])
+        dic_df_mod_case[mod][c] = add_log(dic_df_mod_case[mod][c].copy())
         #dic_dfsm_mod_case[mod][c] = add_log(dic_dfsm_mod_case[mod][c])
         
-df_obs = add_log(df_obs_rename)
+dic_df_mod_case['Observations']['Observations'] = add_log(dic_df_mod_case['Observations']['Observations'])
+df_ons = dic_df_mod_case['Observations']['Observations']
 
 
 # %%
@@ -341,12 +360,16 @@ mod='NorESM'
 # %%
 ca = mod2cases[mod][0]
 
-# %%
-mask_obs_N = dic_df_mod_case[mod][ca]['obs_N100'].notnull()
-mask_obs_OA = dic_df_mod_case[mod][ca]['obs_OA'].notnull()
-
 # %% [markdown]
 # ## Compute daily medians:
+
+# %%
+
+# %%
+
+# %%
+path_save_daily_medians = Path(f'Temp_data/{select_station}_daily_medians')
+path_save_daily_medians.parent.mkdir(exist_ok=True)
 
 # %%
 dic_df_med = dict()
@@ -361,6 +384,9 @@ for mo in dic_df_mod_case.keys():
         
         _df = _df[_df['some_obs_missing']==False]
         dic_df_med[use_name] = _df.resample('D').median()
+        
+        fp = path_save_daily_medians.parent / f'{path_save_daily_medians.name}_{use_name}.csv'
+        dic_df_med[use_name].to_csv(fp)
 
 
 # %%
@@ -567,6 +593,9 @@ df_s['N100'].plot()
 
 
 # %%
+models_and_obs
+
+# %%
 fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
 axs_extra = axs_extra.flatten()
 
@@ -627,6 +656,83 @@ fig.savefig(fn.with_suffix('.pdf'), dpi=150)
 
 
 plt.show()
+
+# %% [markdown]
+# ### Residuals
+
+# %%
+
+## Settings
+alpha_scatt = 0.5
+
+figsize=[7,10]
+xlab = r'T  [$^\circ$C]'
+ylab = r'$\Delta$OA [$\mu m^{-3}$]'
+
+season = 'JA'
+xlims = [5,30]
+
+#ylims = [1,700]
+
+# OBS: 
+v_y = 'OA'
+v_x = 'T_C'
+
+
+xscale='linear'
+yscale='linear'
+
+fig, axs = plt.subplots(len(models_and_obs), sharex=True, sharey= True, figsize=figsize)
+
+## Settings
+alpha_scatt = 0.6
+
+
+for mo, ax in zip(models_and_obs, axs):
+    df_s =  dic_df_med[mo]
+    print(mo)
+    mask_months = select_months(df_s, season=season)
+    df_s = df_s[mask_months].copy()
+    
+    #popt, pov, label, func, out = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', return_func=True, return_out_obj=True)
+    #popt, pov, label, func = get_log_fit_abc(df_s,v_x,v_y, return_func=True)
+    popt, pov, label, func = get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'exp', return_func=True, beta0=[0.01,.12])
+
+    _mi = df_s[v_x].min()
+    _ma = df_s[v_x].max() 
+    ax.scatter(df_s[v_x],df_s[v_y]-func(df_s[v_x],*popt),
+                                    color=cdic_model[mo], 
+                #alpha=alpha_scatt, 
+                #facecolor='none',
+               alpha=alpha_scatt,
+               
+                edgecolor=cdic_model[mo],
+
+                label=label
+                   )
+    _xlim = [_mi*.95, _ma*1.05]
+    ax_ex.set_yscale(yscale)
+    ax_ex.set_xscale(xscale)
+
+
+    ax.hlines(0, xmin=xlims[0],xmax=xlims[1], color='k', linewidth=1)
+    ax.legend(frameon=False)
+    ax.set_ylabel(ylab)
+    ax.set_title(mo, y=.93)
+    ax.set_xlim(xlims)
+
+        
+#fig.suptitle('Observations')
+axs[-1].set_xlabel(xlab)
+fig.suptitle(r'Residuals fits')
+
+sns.despine(fig)    
+    
+fn = make_fn_scat(f'residual_ln_{season}', v_x, v_y)
+ax.legend(frameon=False)
+fig.savefig(fn, dpi=150)
+fig.savefig(fn.with_suffix('.pdf'), dpi=150)
+print(fn)
 
 
 # %% [markdown]
@@ -718,7 +824,16 @@ def plot_fit(func, popt, mo, xlims, yscale, xscale, ax):
 
 
 # %%
-models_and_obs[::-1]
+dic_df_med['EC-Earth']
+
+# %%
+df_s[[v_x,v_y]]
+
+# %%
+df_s[[v_x,v_y]].dropna()
+
+# %%
+_df = df_s[[v_x,v_y]].dropna()
 
 # %%
 ## Settings
@@ -730,9 +845,9 @@ xlab = r'OA [$\mu m^{-3}$]'
 season = 'JA'
 source_list = models_and_obs[::-1]
 
-xlims = [.01,10]
+xlims = [.01,12]
 
-ylims = [1,5000]
+ylims = [0,5000]
 
 # OBS: 
 v_y = 'N50'
@@ -772,6 +887,7 @@ for mo, ax in zip(source_list, axs_sub):
     df_s = df_s[mask_months].copy()
     
     popt, pov, label, func = get_log_fit_abc(df_s,v_x,v_y, return_func=True)
+    
     plot_fit(func, popt, mo, xlims, yscale, xscale, ax)
     plot_fit(func, popt, mo, xlims, yscale, xscale, axs_sub[-1])
 
@@ -782,9 +898,9 @@ leg = axs_sub[-1].legend(bbox_to_anchor=(1,1,), frameon=False)
 legs.append(leg)
 
 
-xlims = [.01,10]
+xlims = [.01,12]
 
-ylims = [1,3000]
+ylims = [0,3000]
 
 # OBS: 
 v_y = 'N100'
@@ -808,8 +924,12 @@ for mo, ax in zip(source_list, axs_sub):
     print(mo)
     mask_months = select_months(df_s, season=season)
     df_s = df_s[mask_months].copy()
-    
-    popt, pov, label, func = get_log_fit_abc(df_s,v_x,v_y, return_func=True)
+    try:
+        popt, pov, label, func = get_log_fit_abc(df_s,v_x,v_y, return_func=True)
+    except:
+        #popt, pov, label, func = get_log_fit_abc(df_s,v_x,v_y, return_func=True)
+        popt, pov, label, func = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', return_func=True)
+        
     plot_fit(func, popt, mo, xlims, yscale, xscale, ax)
     plot_fit(func, popt, mo, xlims, yscale, xscale, axs_sub[-1])
 
@@ -823,12 +943,9 @@ legs.append(leg)
 
     
     
-xlims = [.01,10]
+xlims = [.01,12]
 
-ylims = [1,200]
-
-
-
+ylims = [0,1000]
 
 
 # OBS: 
@@ -879,6 +996,11 @@ fn = make_fn_scat(f'together_{season}', v_x, 'Nx')
 fig.savefig(fn, dpi=150, bbox_inches='tight')#)
 fig.savefig(fn.with_suffix('.pdf'), dpi=150, bbox_inches='tight')#)
 print(fn)
+
+# %%
+dic_df_med.keys()
+
+# %%
 
 # %%
 ## Settings
@@ -1873,3 +1995,5 @@ plt.scatter(df_s[v_x].dropna(),df_s[v_y].dropna(), marker='.')
 plt.scatter(df_s[v_x],df_s[v_y]-func(df_s[v_x].dropna(),*popt))
 #plt.scatter(df_s[v_x].dropna(),df_s[v_y].dropna(), marker='.')
 
+
+# %%

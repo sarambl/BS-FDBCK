@@ -83,6 +83,12 @@ import datetime
 model_lev_i=-1
 select_station = 'ATTO'
 
+# %% [markdown]
+# #### Model level different in UKESM because model has much finer resolution close to the ground 
+
+# %%
+model_lev_i_ukesm = -2
+
 # %%
 postproc_data = path_measurement_data /'model_station'/select_station
 postproc_data.mkdir(parents=True, exist_ok=True)
@@ -367,7 +373,7 @@ time_res = 'hour'
 space_res = 'locations'
 model_name = 'UKESM'
 
-from_t = '2013-01-01'
+from_t = '2012-01-01'
 to_t = '2019-01-01'
 
 
@@ -701,7 +707,11 @@ for mod in dic_mod_ca.keys():
     if mod not in ['EC-Earth', 'UKESM']:
         continue
     print(mod)
-    lev_i_tm5 = -model_lev_i-1
+    if mod =='UKESM':
+        print(f'Using level {model_lev_i_ukesm} for UKESM')
+        lev_i_tm5 = -model_lev_i_ukesm-1
+    else:
+        lev_i_tm5 = -model_lev_i-1
     for ca in dic_mod_ca[mod].keys():
         dic_mod_ca[mod][ca] = dic_mod_ca[mod][ca].isel(lev=lev_i_tm5)
         if mod=='EC-Earth':
@@ -911,7 +921,8 @@ from bs_fdbck.util.BSOA_datamanip.ukesm import ds2df_ukesm
 df, df_sm = ds2df_ukesm(ds_ukesm,
                         take_daily_median=False,
                         #air_density=air_dens,
-                        model_lev_i =model_lev_i)
+                        model_lev_i =model_lev_i
+                       )
 #df.index = df.reset_index()['time'].apply(fix_echam_time)
 df
 
@@ -1157,5 +1168,7 @@ dic_df_mod_case[mod][ca]['OA_STP']#.plot()
 
 # %%
 pd.read_csv('/proj/bolinc/users/x_sarbl/analysis/BS-FDBCK/Data/model_station/ATTO/ATTO_station_NorESM_OsloAero_intBVOC_f09_f09_mg17_fssp_ilev-1.csv')
+
+# %%
 
 # %%

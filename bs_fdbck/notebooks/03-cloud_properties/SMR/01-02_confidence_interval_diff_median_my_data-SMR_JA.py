@@ -44,6 +44,20 @@ from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 
 # %%
+import scienceplots
+import scienceplots
+plt.style.use([
+    'default',
+    # 'science',
+    'acp',
+    # 'sp-grid',
+    'no-black',
+    'no-latex',
+    'illustrator-safe'
+])
+
+
+# %%
 # %load_ext autoreload
 # %autoreload 2
 
@@ -260,8 +274,9 @@ df_hyy_1
 model_name_noresm = 'NorESM'
 model_name_echam  = 'ECHAM-SALSA' 
 model_name_ec_earth  = 'EC-Earth'
+model_name_ukesm  = 'UKESM'
 
-models =[model_name_noresm,model_name_echam,model_name_ec_earth]
+models =[model_name_noresm,model_name_echam,model_name_ec_earth,model_name_ukesm]
 
 
 # %% [markdown] tags=[]
@@ -397,6 +412,47 @@ fn_final_ec_earth_csv
 # %%
 cases_ec_earth = [case_name_ec_earth]
 
+# %%
+
+# %% [markdown] tags=[]
+# ### UKESM
+
+# %%
+
+case_name = 'AEROCOMTRAJ'
+case_name_ukesm = 'AEROCOMTRAJ'
+time_res = 'hour'
+space_res='locations'
+model_name='UKESM'
+model_name_ukesm ='UKESM'
+
+
+# %% [markdown] tags=[]
+# #### Define some strings for files
+
+# %%
+str_from_t = pd.to_datetime(from_time1).strftime('%Y%m')
+str_to = pd.to_datetime(to_time2).strftime('%Y%m')
+
+
+# %% [markdown]
+# #### Input files:
+
+# %%
+input_path_ukesm = path_extract_latlon_outdata / model_name_ukesm/ case_name_ukesm
+
+# %%
+
+# %%
+fn_final_ukesm = input_path_ukesm / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}.nc'
+fn_final_ukesm_csv = input_path_ukesm / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}ALL_year.csv'
+
+# %%
+fn_final_ukesm_csv
+
+# %%
+cases_ukesm = [case_name_ukesm]
+
 # %% [markdown]
 # ### Read in model data
 
@@ -407,6 +463,9 @@ df_mod_echam = pd.read_csv(fn_final_echam_csv, index_col=[0,1,2], parse_dates=[0
 df_mod_echam['month'] =df_mod_echam.index.get_level_values(0).month
 df_mod_ec_earth = pd.read_csv(fn_final_ec_earth_csv, index_col=[0,1,2], parse_dates=[0] )
 df_mod_ec_earth['month'] =df_mod_ec_earth.index.get_level_values(0).month
+
+df_mod_ukesm = pd.read_csv(fn_final_ukesm_csv, index_col=[0,1,2], parse_dates=[0] )
+df_mod_ukesm['month'] =df_mod_ukesm.index.get_level_values(0).month
 
 
 # %%
@@ -448,6 +507,7 @@ dic_df=dict()
 dic_df[model_name_echam] = df_mod_echam
 dic_df[model_name_noresm] = df_mod_noresm
 dic_df[model_name_ec_earth] = df_mod_ec_earth
+dic_df[model_name_ukesm] = df_mod_ukesm
 dic_df['Observations'] = df_hyy_1
 
 # %% [markdown] tags=[]
@@ -461,8 +521,19 @@ rn_dic_echam = {
    # 'cod'      : 'COT',
     #'ceff_ct'  : 'r_eff',
    # 'ceff_ct_incld'  : 'r_eff',
-    
-    
+    'OA_STP':'OA',
+
+
+}
+rn_dic_ukesm = {
+    #'cwp'      : 'CWP',
+   # 'cwp_incld'      : 'CWP',
+   # 'cod'      : 'COT',
+    #'ceff_ct'  : 'r_eff',
+   # 'ceff_ct_incld'  : 'r_eff',
+    'OA_STP':'OA',
+
+
 }
 rn_dic_noresm = {
     'TGCLDLWP_incld'         : 'CWP',
@@ -477,54 +548,49 @@ rn_dic_obs = {
     
 }
 rn_dic_ec_earth = {
-    'OA_STP':'OA'
+    'OA_STP':'OA',
 }
 
+
+# %%
+model2rndic = {
+    model_name_noresm : rn_dic_noresm,
+    model_name_ec_earth: rn_dic_ec_earth,
+    model_name_echam:rn_dic_echam,
+    model_name_ukesm:rn_dic_ukesm,
+    'Observations': rn_dic_obs
+}
 
 # %% [markdown]
 # #### Fix NorESM having OA as well as OA_STP
 
 # %%
-dic_df[model_name_noresm] = dic_df[model_name_noresm].drop(['OA'], axis=1)
-
-# %%
-for key, rn in zip([model_name_noresm, model_name_echam, model_name_ec_earth,'Observations'],
-                   [rn_dic_noresm, rn_dic_echam,rn_dic_ec_earth, rn_dic_obs]):
-    dic_df[key] = dic_df[key].rename(rn, axis=1)
-
-# %% [markdown]
-# #### Some tests:
-
-# %%
-_ds1 = dic_df[model_name_noresm].to_xarray()
-
-# %%
-_ds2 = dic_df[model_name_echam].to_xarray()
-_ds3 = dic_df[model_name_ec_earth].to_xarray()
-
-# %% tags=[]
-_ds1
-
-# %%
-_ds1['OA'].count('time').plot()
-
-# %%
-_ds2['COT'].count('time').plot()
-
-# %%
-_ds3['r_eff'].count('time').plot(robust=True)
-
-# %%
-_ds2['time'] = pd.to_datetime(_ds2['time'])
-_ds1['time'] = pd.to_datetime(_ds1['time'])
-_ds3['time'] = pd.to_datetime(_ds3['time'])
+dic_df.keys()
 
 
 # %%
-_ds2['COT'].isel(lon=1,lat=1).plot()
+models
 
 # %%
-_ds1['COT'].isel(lon=2,lat=2).plot()
+for mod in models+ ['Observations']:
+    _rn_dic = model2rndic[mod]
+    print(mod)
+    print(_rn_dic)
+    if ('OA' in dic_df[mod].columns) & ('OA_STP' in dic_df[mod].columns):
+        if ('OA_STP' in _rn_dic):
+            if (_rn_dic['OA_STP']=='OA'):
+                dic_df[mod] = dic_df[mod].drop(['OA'], axis=1)
+                print('dropping OA in favor of OA_STP')
+    dic_df[mod] = dic_df[mod].rename(_rn_dic, axis=1)
+
+# %%
+models
+
+# %%
+for mod in dic_df.keys():
+    print(mod)
+    print(dic_df[mod].to_xarray())
+
 
 # %%
 model_name_echam
@@ -554,6 +620,7 @@ dic_bins = dict()
 dic_bins[model_name_noresm] = pd.IntervalIndex.from_breaks([   50,  80,  110, 140, 170, 200,230, 500])
 dic_bins[model_name_echam] = pd.IntervalIndex.from_breaks([   50,  80,  110, 140, 170, 200,230, 500])
 dic_bins[model_name_ec_earth] = pd.IntervalIndex.from_breaks([   50,  80,  110, 140, 170, 200,230, 500])
+dic_bins[model_name_ukesm] = pd.IntervalIndex.from_breaks([   50,  80,  110, 140, 170, 200,230, 500])
 dic_bins['Observations'] = pd.IntervalIndex.from_breaks([   50,  80,  110, 140, 170, 200,230, 500])
 
 
@@ -589,18 +656,17 @@ for model_name in dic_df.keys():
     print(model_name)
     df_mod = dic_df[model_name].copy()
     ## drop nans:
-    if model_name =='EC-Earth':
+    if model_name in ['UKESM','EC-Earth']:
         _vl = varlist_notna_noCOT
     else:
         _vl = varlist_notna
-    df_mod = df_mod[df_mod[_vl].notna().all(axis=1)]
-    
-    
-    
+    df_mod = df_mod[df_mod[_vl].replace([np.inf, -np.inf], np.nan).notna().all(axis=1)]
+
+
     for v in varl_categories:
         q34 = df_mod[v].quantile(.3333333)
         print(q34)
-        
+
         q66 = df_mod[v].quantile(.6666666)
         print(q66)
         if v=='OA':
@@ -613,12 +679,12 @@ for model_name in dic_df.keys():
 
         df_mod[f'{v}_low'] = df_mod[v]<q34
         df_mod[f'{v}_high']= df_mod[v]>q66
-        mid_range = ( df_mod[v].quantile(.34)<df_mod[v]) & (df_mod[v]<df_mod[v].quantile(.66))
+        mid_range = ( q34<df_mod[v]) & (df_mod[v]<q66)
         df_mod[f'{v}_mid_range'] = mid_range
         df_mod=df_mod.assign(**{f'{v}_category': pd.NA})
         df_mod.loc[df_mod[f'{v}_high'], f'{v}_category'] = f'{v} high'
         df_mod.loc[df_mod[f'{v}_low'], f'{v}_category'] = f'{v} low'
-    
+
     bins = dic_bins[model_name]
     df_mod['CWP_cut']=pd.cut(df_mod['CWP'], bins=bins)#, labels=labels)
 
@@ -632,12 +698,10 @@ for model_name in dic_df.keys():
     labels = np.arange(n_bins)
     # bins from 5th to 95th percentile
     qants = df_mod['CWP'].quantile([.0,.95])
-    
     bins2 = pd.interval_range(qants.iloc[0], qants.iloc[1], periods=n_bins)
     bins2.values[-1] = pd.Interval(bins2[-1].left,np.inf)
-
     bins2.values[0] = pd.Interval(0,bins2[0].right)
-    
+
     df_mod['CWP_cut2']=pd.cut(df_mod['CWP'], bins=bins2, labels=labels)
     di_per_lab = {bins2[i]:labels[i] for i in range(len(labels))}
 
@@ -697,7 +761,7 @@ palette_OA = cmap_list[0:2]
 
 
 # %%
-fig, axs = plt.subplots(4,1, sharex=True, figsize =[6,6])
+fig, axs = plt.subplots(5,1, sharex=True, figsize =[6,6])
 v_x = 'COT'
 x_cut = 100
 v_hue = 'OA_category'
@@ -707,7 +771,8 @@ _palette = palette_OA#cmap_list[0:2]
 
 
 for key, ax in zip(dic_df.keys(), axs):
-    if key=='EC-Earth':
+    ax.set_title(key)
+    if key in ['EC-Earth','UKESM']:
         continue
     _df = dic_df[key].copy()
     _df = _df[_df[v_x]<x_cut]
@@ -758,7 +823,7 @@ fig.savefig(fn.with_suffix('.pdf'), dpi=150)
 
 
 # %%
-fig, axs = plt.subplots(4,1, sharex=True, figsize =[6,6])
+fig, axs = plt.subplots(5,1, sharex=True, figsize =[6,6])
 
 v_x = 'CWP'
 x_cut = 500
@@ -832,7 +897,7 @@ s = s[0<s]
 len(s[s.notna()])
 
 # %%
-fig, axs = plt.subplots(4,1, sharex=True, figsize =[6,6], dpi=100)
+fig, axs = plt.subplots(5,1, sharex=True, figsize =[6,6], dpi=100)
 
 v_x = 'r_eff'
 x_cut = 700
@@ -899,7 +964,7 @@ fig.savefig(fn.with_suffix('.pdf'), dpi=150)
 
 
 # %%
-fig, axs = plt.subplots(4,2,  figsize =[6,6], sharex=True, sharey=True)
+fig, axs = plt.subplots(5,2,  figsize =[6,6], sharex=True, sharey=True)
 
 v_x = 'CWP'
 v_y = 'COT'
@@ -913,7 +978,7 @@ _palette = palette_OA#cmap_list[0:2]
 for i, key in enumerate(dic_df.keys()):
     axs_sub = axs[i,:]
     for hue_v, ax in zip(hue_order, axs_sub):
-        if (key=='EC-Earth') and (v_y=='COT'):
+        if (key in ['EC-Earth','UKESM']) and (v_y=='COT'):
             continue
         _df = dic_df[key].copy()
         _df = _df[_df[v_x]<x_cut]
@@ -1042,7 +1107,7 @@ def bootstrap_return_quantiles(_df_low,_df_high,
 hue_labs = ['OA low', 'OA high']
 hue_var = 'OA_category'
 
-itterations = 1000
+itterations = 50000
 
 
 
@@ -1057,7 +1122,7 @@ for ax, y_var in zip(axs,[y_var1, y_var2]):
     dic_median_CI[y_var] = dict()
     for key in dic_df.keys():
         print(key)
-        if (key =='EC-Earth') and (y_var=='COT'):
+        if (key in ['EC-Earth', 'UKESM']) and (y_var=='COT'):
             continue
         _df = dic_df[key].copy()
     
@@ -1110,7 +1175,7 @@ for source in dic_median_CI[v].keys():
     
     fn = make_fn('sample_stats', 'OA',v, comment=source).with_suffix('.csv')
     _df_both.to_csv(fn)
-
+    print(fn)
     print((sa_med['COT']*sa_num['n_tot']).sum()/ sa_num['n_tot'].sum())
 
 
@@ -1127,11 +1192,26 @@ for source in dic_median_CI[v].keys():
     
     fn = make_fn('sample_stats', 'OA',v, comment=source).with_suffix('.csv')
     _df_both.to_csv(fn)
+    print(fn) 
 
     
 
 # %% [markdown]
 # # Final plot: 
+
+# %%
+import scienceplots
+import scienceplots
+plt.style.use([
+    'default',
+    # 'science',
+    'acp',
+    # 'sp-grid',
+    'no-black',
+    'no-latex',
+    'illustrator-safe'
+])
+
 
 # %% tags=[]
 figsize = [6,8]
@@ -1162,7 +1242,7 @@ ax = axs[0]
 for ax, y_var in zip(axs,[y_var1, y_var2]):
     
     for key in dic_df.keys():
-        if (key=='EC-Earth') and (y_var =='COT'):
+        if (key in ['EC-Earth', 'UKESM']) and (y_var =='COT'):
             continue
         diff_med = dic_median_CI[y_var][key]['sample_median']
         df_sample_quant = dic_median_CI[y_var][key]['bootstrap_quant']

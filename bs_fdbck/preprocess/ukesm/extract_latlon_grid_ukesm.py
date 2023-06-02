@@ -37,7 +37,14 @@ varl = [
     'weight_Reff_2d',
     'cdnc_top_cloud_x_weight',
     'weight_of_cdnc_top_cloud',
-
+    'ls_lwp',
+    'ls_iwp',
+    'conv_iwp',
+    'conv_lwp',
+    'rho',
+    'layer_thickness',
+    'Temp',
+    'SFisoprene',
 ]
 
 
@@ -144,12 +151,17 @@ def launch_ncks(comms, max_launches=5):
 
 # %%
 
-def extract_subset(case_name='AEROCOMTRAJ',
+def extract_subset(
+        case_name='AEROCOMTRAJ',
                    from_time='2012-01-01',
                    to_time='2019-01-01',
                    station='SMR',
                    model_name='UKESM',
-                   lat_lims=None, lon_lims=None, out_folder=None, tmp_folder=None, history_field='.h1.', ):
+                   lat_lims=None, lon_lims=None, out_folder=None, tmp_folder=None, history_field='.h1.',
+):
+    # %%
+    # case_name='AEROCOMTRAJ';from_time='2012-01-01';to_time='2019-01-01';station='ATTO';model_name='UKESM';lat_lims=None; lon_lims=None; out_folder=None; tmp_folder=None;
+
     # %%
 
     if lat_lims is None:
@@ -214,10 +226,10 @@ def extract_subset(case_name='AEROCOMTRAJ',
 
     # %%
     for f in files:
-        print(f)
+
         print(f.stem)
     # %%
-    print(files)
+
 
     try:
         subprocess.run('module load NCO/4.7.9-nsc5', shell=True)
@@ -226,6 +238,8 @@ def extract_subset(case_name='AEROCOMTRAJ',
     comms = []
     files_out = list()
     for f in files:
+
+
         print(f)
         f_s = f.stem
         fn_o = f_s + f'_{station}_tmp_subset.nc'
@@ -242,17 +256,17 @@ def extract_subset(case_name='AEROCOMTRAJ',
         co2 = f'ncks -O --mk_rec_dmn time {fp_o} {fp_o}'
         # -v u10max,v10max
         comms.append(co +'; '+ co2 )
-
     # %%
     for co in comms:
         print(co)
-        # subprocess.run(co, shell=True)
+        #subprocess.run(co, shell=True)
 
     # %%
 
     # return
     launch_ncks(comms, max_launches=5)
     print('done')
+
     # %%
     # %%
     fn_out_final = out_folder / f'{case_name}_{from_time}-{to_time}_concat_subs_{lon_lims[0]}' \
@@ -272,8 +286,12 @@ def extract_subset(case_name='AEROCOMTRAJ',
         files_str_patt = f'{f.parent}/*{var}*_{station}_tmp_subset.nc'
         file_out = out_folder / f'{case_name}_{from_time}-{to_time}_{v}_concat_subs_{lon_lims[0]}' \
                                     f'-{lon_lims[1]}_{lat_lims[0]}-{lat_lims[1]}.nc'
-        com_concat = f'ncrcat {files_str_patt} {file_out}'
+        com_concat = f'ncrcat -O {files_str_patt} {file_out}'
+        if v =='layer_thickness':
+            files_str_patt = f'{f.parent}/*{var}*_{station}_tmp_subset.nc'
+            com_concat = f'nccopy {files_str_patt} {file_out}'
         print(com_concat)
+
         # %%
         subprocess.run(com_concat, shell=True)
     # %%

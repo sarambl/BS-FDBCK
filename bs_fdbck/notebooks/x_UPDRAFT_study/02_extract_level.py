@@ -171,9 +171,6 @@ import pandas as pd
 df_loc = pd.read_csv('locations.csv', index_col =0)
 
 # %%
-ds
-
-# %%
 from bs_fdbck.util.imports.import_fields_xr_v2 import xr_import_NorESM
 
 
@@ -195,6 +192,7 @@ for st in df_loc.columns:
 # %%
 
 # %%
+ds['Z3'].isel(lev=-2).load()-ds['Z3'].isel(lev=-1).load()
 
 # %% [markdown]
 # ## Z3 does not vary. with time:
@@ -210,6 +208,8 @@ df_loc
 
 # %%
 dic_ds_station = dict()
+indx_dic = dict()
+pres_dic = dict()
 
 for st in df_loc.columns:
     print(st)
@@ -222,6 +222,8 @@ for st in df_loc.columns:
     da_diff.isel(lev=slice(-10,None)).plot()
     plt.show()
     index = da_diff.argmin().compute()
+    indx_dic[st] = index
+    pres_dic[st] = _ds['lev'].isel(lev=index)
     print(index) 
     dic_ds_station[st] = _ds.drop('Z3').isel(lev=index).copy().drop('lev')
 
@@ -230,12 +232,64 @@ ls = [dic_ds_station[st] for st in dic_ds_station.keys()]
 ds_corr_height = xr.concat(ls, dim ='station')
 
 # %%
+
+# %%
+ds_sub = ds.sel( lev=slice(600,1000))
+
+fig, axs = plt.subplots(11,5, figsize=[18,15], sharex=True, sharey=False)
+for i,l  in enumerate(ds_sub.lev):
+    for j, st in enumerate(ds_sub.station):
+        ax = axs[i,j]
+        _ds = ds_sub.sel(lev=l, station=st)
+        _ds = _ds.where(_ds['T']>(-5+273))
+        (100*_ds['Smax_cldv']).plot.hist(ax=ax, bins=np.linspace(.01,2))
+        ax.set_title(f'lev:{l.values:.1f}, {st.values}')
+        if i==10:
+            ax.set_xlabel('Smax [%]')
+        else:
+            ax.set_xlabel('')
+        if float(pres_dic[str(st.values)])==float(l):
+            print('hey!!!')
+            ax.set_title(f'lev:{l.values:.1f}, {st.values}', c='r')
+            
+fig.tight_layout()
+fig.savefig('Smax_test_lev.png', dpi=200)
+
+# %%
+ds_sub = ds.sel( lev=slice(600,1000))
+
+fig, axs = plt.subplots(11,5, figsize=[18,15], sharex=True, sharey=False)
+for i,l  in enumerate(ds_sub.lev):
+    for j, st in enumerate(ds_sub.station):
+        ax = axs[i,j]
+        _ds = ds_sub.sel(lev=l, station=st)
+        _ds = _ds.where(_ds['T']>(-5+273))
+        _ds = _ds.where(_ds['Smax_cldv_supZero']>0)
+        #_ds = _ds.where(_ds['WSUB']!=0.2)
+        (_ds['WSUB']).plot.hist(ax=ax, bins=np.linspace(.01,2), density=False)
+        ax.set_title(f'lev:{l.values:.1f}, {st.values}')
+        if i==10:
+            ax.set_xlabel('updraft [m/s]')
+        else:
+            ax.set_xlabel('')
+        if float(pres_dic[str(st.values)])==float(l):
+            print('hey!!!')
+            ax.set_title(f'lev:{l.values:.1f}, {st.values}', c='r')
+            
+fig.tight_layout()
+fig.savefig('updraft_test_lev.png', dpi=200)
+
+# %%
+fig.tight_layout()
+fig
+
+# %%
 ds_corr_height.drop(['CLOUDCOVER_CLUBB','ilev'])
 
 # %% [markdown]
 # ## Write to file: 
 
-# %%
+# %% tags=[]
 ds_corr_height.drop(['CLOUDCOVER_CLUBB','ilev']).to_netcdf(fn_output_corr_height)
 
 # %% [markdown]
@@ -353,7 +407,8 @@ ds_corr_height_rn = ds_corr_height.rename(rename_dic)
 # ## Drop WT
 
 # %%
-ds_corr_height_rn = ds_corr_height_rn.drop('WTKE')#.drop(.rename(rename_dic)
+ds_corr_height_rn = ds_corr_height_rn.drop('WTKE') 
+#.drop(.rename(rename_dic)
 
 # %% [markdown]
 # ## TO netcdf 
@@ -377,6 +432,60 @@ for st in ds_corr_height['station'].values:
     df.to_csv(fn_out)
     
 #ds_corr_height_rn.to_dataframe()
+
+# %%
+df['n70_cm3'] = df['n70']*1e-6
+df['n100_cm3'] = df['n100']*1e-6
+df['cdnc_cm3'] = df['cdnc']*1e-6
+
+# %%
+df['CC
+
+# %%
+df.columns
+
+# %%
+sns.histplot(y='cdnc_cm3',x='n100_cm3', data = df, bins = (np.linspace(0,100),np.linspace(0,100),))
+
+# %%
+df['cdnc_cm3'].dropna()
+
+# %%
+fig, axs = plt.subplots(5,2, figsize=[7,15])
+for i, st in enumerate(ds_corr_height['station'].values):
+    print(st)
+    df = ds_corr_height_rn.sel(station=st).to_dataframe()
+    if len(df['cdnc'].dropna())==0:
+        continue
+
+    df['n70_cm3'] = df['n70']*1e-6
+    df['n100_cm3'] = df['n100']*1e-6
+    df['cdnc_cm3'] = df['cdnc']*1e-6
+    _axs = axs[i,:]
+    for v, ax in zip(['n70_cm3','n100_cm3'], _axs):
+        sns.histplot(y='cdnc_cm3',x=v, data = df,
+                    ax = ax,
+                    bins = (np.logspace(0,3,20),np.logspace(0,3,20),), 
+                    cmap='plasma'
+                    #    alpha=.2,
+                    )
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        #ax.set_ylim([0,1000])
+        ax.set_title(st)
+        
+        
+fig.tight_layout()
+
+# %%
+sns.displot(y='cdnc_cm3',x='n70_cm3', data = df, bins = (np.linspace(0,40,10),np.linspace(0,40,10),), cmap='plasma')
+
+
+# %%
+sns.displot(y='cdnc_cm3',x='n100_cm3', data = df, bins = (np.linspace(0,40,10),np.linspace(0,40,10),), cmap='plasma')
+
+# %%
+sns.displot(y='cdnc_cm3',x='n70_cm3', data = df, bins = (np.linspace(0,40,10),np.linspace(0,40,10),))
 
 # %% [markdown]
 #
@@ -411,6 +520,21 @@ ds_corr_height['N30'].sel(station='Puijo').plot(marker='o', linewidth=0, )
 ds_corr_height['N50'].sel(station='Puijo').plot(marker='o', alpha=.4, linewidth=0)
 
 plt.legend()
+
+# %%
+(ds_corr_height['N70']*1e-6).plot.hist(bins = np.logspace(0,4,), xscale='log')
+
+# %%
+ds_corr_height['Smax_cldv'].to_dataframe().reset_index()
+
+# %%
+sns.histplot(x='Smax_cldv', hue='station',data = ds_corr_height['Smax_cldv'].to_dataframe().reset_index())
+
+# %%
+sns.histplot(x='Smax_cldv', hue='station',data = ds_corr_height['Smax_cldv'].to_dataframe().reset_index())
+
+# %%
+sns.histplot(x='Smax_incld', hue='station',data = ds_corr_height['Smax_incld'].to_dataframe().reset_index())
 
 # %%
 plt.figure(dpi=200)
@@ -517,5 +641,13 @@ zgeom = geop_to_geom(Z)
 # %%
 plt.plot(Z)
 plt.plot(zgeom)
+
+# %%
+
+# %%
+
+# %%
+
+# %%
 
 # %%

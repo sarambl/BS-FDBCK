@@ -187,6 +187,7 @@ def get_least_square_fit_and_labs(df_s, v_x, v_y, fit_func = 'linear', return_fu
 def get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'linear', return_func=False,
                          return_out_obj = False,
                          least_square_kwrgs=None,
+                         pprint=True,
                          beta0=None):
     if fit_func =='linear':
         func = target_function_linear
@@ -235,7 +236,7 @@ def get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'linear', return_func=False,
 
     # df_s_norm =(df_s-df_s.mean())/df_s.std()
 
-    out = get_odr_fit(df_s, func, v_x, v_y, beta0=beta0)
+    out = get_odr_fit(df_s, func, v_x, v_y, beta0=beta0, pprint=pprint)
     # out.pprint()
     # lab = 'fit: a=%5.3f, b=%5.3f, c=%5.3f' % tuple(popt))
     # cs = '%5.2f' % popt[-1]
@@ -270,7 +271,7 @@ def ax_lab(popt):
     label = '$%5.2fx$' % tuple(popt)
     return label
 
-def get_odr_fit(df_s, func, v_x, v_y, beta0):
+def get_odr_fit(df_s, func, v_x, v_y, beta0, pprint = True):
     _df = df_s[[v_x, v_y]].dropna()
     y = _df[v_y].values
     x = _df[v_x].values
@@ -283,7 +284,8 @@ def get_odr_fit(df_s, func, v_x, v_y, beta0):
 
     # popt, pcov = odr(func, x, y)
     out = ordinal_distance_reg.run()
-    out.pprint()
+    if pprint:
+        out.pprint()
     return out
 def get_least_squares_fit(df_s, func, v_x, v_y, beta0,least_square_kwrgs=None):
     if least_square_kwrgs is None:
@@ -534,7 +536,7 @@ def get_log_fit_abc(df_s, v_x, v_y, func=func_log_abc, return_func=False):
     y = _df[v_y].values
     x = _df[v_x].values
 
-    popt, pcov = scipy.optimize.curve_fit(func, x, y)
+    popt, pcov = scipy.optimize.curve_fit(func, x, y,maxfev=10000)
     # lab = 'fit: a=%5.3f, b=%5.3f, c=%5.3f' % tuple(popt))
     # cs = '%5.2f'%popt[-1]
     label = log_abc_lab(popt)

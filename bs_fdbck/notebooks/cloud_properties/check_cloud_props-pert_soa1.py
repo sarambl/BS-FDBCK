@@ -261,7 +261,7 @@ df_mod['CWP_qcutl'] = df_mod['CWP_qcut'].apply(lambda x:x.mid)
 bins = pd.IntervalIndex.from_breaks([ 10,  40,  70,  100, 130, 160, 190,500])
 
 
-df_mod['CWP_cut']=pd.cut(df_mod['TGCLDCWP'], bins=bins)#, labels=labels)
+df_mod['CWP_cut'] = pd.cut(df_mod['TGCLDCWP'], bins=bins)#, labels=labels)
 
 df_mod['CWP_cutl'] = df_mod['CWP_cut'].apply(lambda x:x.mid)
 

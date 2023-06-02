@@ -91,6 +91,12 @@ from_time2 = '2015-01-01'
 to_time2 = '2019-01-01'
 sel_years_from_files = ['2012', '2014', '2015', '2018']
 
+# %% [markdown]
+# #### Model level different in UKESM because model has much finer resolution close to the ground 
+
+# %%
+model_lev_i_ukesm = -2
+
 # %%
 str_from_t = pd.to_datetime(from_time1).strftime('%Y%m')
 str_to = pd.to_datetime(to_time2).strftime('%Y%m')
@@ -112,10 +118,12 @@ daytime_to = daytime_from + 7
 # ## Read in model station data:
 
 # %%
-models = ['ECHAM-SALSA', 'NorESM', 'EC-Earth']
+models = ['UKESM','ECHAM-SALSA', 'NorESM', 'EC-Earth']
+
 mod2cases = {'ECHAM-SALSA': ['SALSA_BSOA_feedback'],
              'NorESM': ['OsloAero_intBVOC_f09_f09_mg17_fssp'],
              'EC-Earth': ['ECE3_output_Sara'],
+             'UKESM':['AEROCOMTRAJ'],
              }
 di_mod2cases = mod2cases.copy()
 
@@ -154,11 +162,14 @@ for mod in models:
         dic_df_station[mod][ca].index = pd.to_datetime(dic_df_station[mod][ca].index)
         # dic_df_mod_case[mod][ca].to_csv(fn_out)
 
+# %%
+pd.read_csv('/proj/bolinc/users/x_sarbl/analysis/BS-FDBCK/Data/model_station/ATTO/ATTO_station_UKESM_AEROCOMTRAJ_ilev-1.csv', index_col=0)
+
 # %% [markdown]
 # ## Calculate datasets for each model
 
 # %% [markdown] tags=[]
-# ### NorESM
+# # NorESM
 
 # %%
 case_name = 'OsloAero_intBVOC_f09_f09_mg17_fssp245'
@@ -558,7 +569,7 @@ _ds = dic_ds['OsloAero_intBVOC_f09_f09_mg17_fssp245']
 _ds['OA_STP'].sel(time='2012-05-30 02:00:00').plot()
 
 # %% [markdown]
-# ### ECHAM-SALSA
+# # ECHAM-SALSA
 
 # %% [markdown]
 # #### Names etc
@@ -610,6 +621,21 @@ varl_st_echam = [
     'tempair',
     'ccn02',
     'ccn10',
+    'N50',
+    'N100',
+    'N200',
+    'N500',
+    'N50-500',
+    'N100-500',
+    'N200-500',
+    'N50_STP',
+    'N100_STP',
+    'N200_STP',
+    'N500_STP',
+    'N50-500_STP',
+    'N100-500_STP',
+    'N200-500_STP',
+
 ]
 
 varl_cl_echam = [
@@ -890,13 +916,16 @@ for seas in calc_seasons:
         df_mod.to_csv(_fn_csv)
 
 # %%
+df_mod['N
+
+# %%
 df_mod.plot.scatter(x='CWP', y='COT')
 
 # %%
 _fn_csv
 
 # %% [markdown] tags=[]
-# ### EC-Earth
+# # EC-Earth
 
 # %% [markdown]
 # #### Names etc
@@ -1244,6 +1273,7 @@ varl_station_ec_earth = [
     'N50_STP',
     'N100_STP',
     'N200_STP',
+    'N500_STP',
     'OA_STP',
     'POM',
     'SOA',
@@ -1359,5 +1389,572 @@ df_mod['r_eff'].plot.hist()
 
 # %%
 print('Done')
+
+# %% [markdown] tags=[]
+# # UKESM
+
+# %%
+
+case_name_ukesm = 'AEROCOMTRAJ'
+case_name = case_name_ukesm
+time_res = 'hour'
+space_res = 'locations'
+model_name_ukesm = 'UKESM'
+model_name = model_name_ukesm
+
+
+# %% [markdown]
+# #### Input path
+
+# %%
+input_path_ukesm = path_extract_latlon_outdata / model_name_ukesm / case_name_ukesm
+
+# %%
+
+cases_ukesm = [case_name_ukesm]
+
+# %%
+from bs_fdbck.util.BSOA_datamanip.ukesm import fix_units_ukesm, extract_2D_cloud_time_ukesm
+
+# %% [markdown]
+# #### Station variables  and others
+
+# %%
+varl_st_ukesm = [
+'Mass_Conc_OM_NS',
+'Mass_Conc_OM_KS',
+'Mass_Conc_OM_KI',
+'Mass_Conc_OM_AS',
+'Mass_Conc_OM_CS',
+'mmrtr_OM_NS',
+'mmrtr_OM_KS',
+'mmrtr_OM_KI',
+'mmrtr_OM_AS',
+'mmrtr_OM_CS',
+'nconcNS',
+'nconcKS',
+'nconcKI',
+'nconcAS',
+'nconcCS',
+'ddryNS',
+'ddryKS',
+'ddryKI',
+'ddryAS',
+'ddryCS',
+'Temp',
+    'N100',
+    'N50',
+    'N200',
+    'N500',
+    'OA',
+    'N100_STP',
+    'N50_STP',
+    'N200_STP',
+    'N500_STP',
+    'N50-500_STP',
+    'N100-500_STP',
+    'N200-500_STP',
+    'OA_STP',
+    'T_C',
+]
+
+varl_cl_ukesm = [
+    'Reff_2d_distrib_x_weight',
+    'Reff_2d_x_weight_warm_cloud',
+    'area_cloud_fraction_in_each_layer',
+    'bulk_cloud_fraction_in_each_layer',
+    'cloud_ice_content_after_ls_precip',
+    'dry_rho',
+    'frozen_cloud_fraction_in_each_layer',
+    'liq_cloud_fraction_in_each_layer',
+    'qcf',
+    'qcl',
+    'supercooled_liq_water_content',
+    'weight_Reff_2d_distrib',
+    'weight_Reff_2d',
+    'cdnc_top_cloud_x_weight',
+    'weight_of_cdnc_top_cloud',
+    'ls_lwp',
+    'ls_iwp',
+    'conv_iwp',
+    'conv_lwp',
+    'rho',
+    'layer_thickness',
+    
+]
+
+
+
+# %% [markdown]
+# #### Filenames:
+
+# %%
+fn_final_ukesm = input_path_ukesm / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}.nc'
+fn_final_ukesm_csv = input_path_ukesm / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}_wet_season.csv'
+fn_final_ukesm_csv_stem = input_path_ukesm / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}.csv'
+
+# %% [markdown]
+# #### Open data area around station
+
+# %% tags=[]
+fl_open = []
+fl_rho = []
+
+for v in varl_cl_ukesm + varl_st_ukesm:
+    fn = input_path_ukesm / f'{case_name}_{from_time1}-{to_time2}_{v}_concat_subs_{str_coordlims}.nc'
+    #print(fn)
+    if fn.exists():
+        if (v=='dry_rho') or (v=='rho'):
+            fl_rho.append(fn)
+            print(f'Adding {v} to rho filelist: {fn}')
+            continue
+            
+        fl_open.append(fn)
+        _ds = xr.open_dataset(fn)
+        try:
+            _ds[v].isel(lat=0,lon=0).plot()
+            plt.show()
+        except:
+            print('ups, coult not plot')
+        print(f'Opening {fn}')
+    else:
+        print(f'{v} not found')
+        print(fn)
+
+
+# %% [markdown] tags=[]
+# #### Open files, decode time etc
+
+# %%
+fl_open = list(set(fl_open))
+
+# %% [markdown] tags=[]
+# #### Some timestamps have small errors in them (20 min off the hour), so we round some files:
+#
+
+# %%
+
+
+ls_ds = []
+for f in fl_open:
+    _ds = xr.open_dataset(f, decode_times=False)
+    if 'time' in _ds.coords:
+        if 'hours since' in _ds['time'].units:
+            _ds['time'] = np.floor(_ds['time'])
+            _ds = xr.decode_cf(_ds)
+    ls_ds.append(_ds)
+
+ds_all = xr.merge(ls_ds)
+
+# %%
+ls_ds_rho = []
+for f in fl_rho:
+    _ds = xr.open_dataset(f, decode_times=False)
+    if 'time' in _ds.coords:
+        if 'hours since' in _ds['time'].units:
+            _ds['time'] = np.floor(_ds['time'])
+            _ds = xr.decode_cf(_ds)
+    ls_ds_rho.append(_ds)
+
+ds_rho = xr.merge(ls_ds_rho)
+
+# %% [markdown]
+# ### Somehow the rho has different level than the other, but this is due to it being at the grid box interface, not mid point, so we can ignore it
+
+# %%
+for v in ['rho','dry_rho']:
+    ds_all[v] = ds_rho[v]
+
+
+# %%
+fn_final_ukesm
+
+# %% [markdown]
+# ### layer thickness has the wrong vertical coordinate name:
+
+# %%
+ds_all['layer'] = ds_all['layer'].swap_dims({'lev':'model_level'})
+
+# %%
+ds_all['ls_lwp'].quantile(.95)*1000
+
+# %%
+from bs_fdbck.util.BSOA_datamanip.ukesm import extract_2D_cloud_time_ukesm, change_units_and_compute_vars_ukesm
+
+# %% tags=[]
+if True:#not fn_final_ukesm.exists():
+    #ds_all = xr.open_mfdataset(fl_open, decode_cf=False)
+    # ds_iso = xr.open_dataset(fl_open[21])
+    # ds = xr.merge([ds_iso,ds])
+    #ds_all = import_fields_xr_echam.decode_cf_echam(ds_all)
+
+    # ds_all = import_fields_xr_echam.decode_cf_echam(ds_all)
+    ds_all = extract_2D_cloud_time_ukesm(ds_all)
+
+    # ds_sel = ds_all.sel(lat = lat_smr, lon= lon_smr, method='nearest').isel( lev=model_lev_i)#.load()
+    ds_all = ds_all.squeeze()
+    #ds_all = ds_all.drop(['hyai', 'hybi', 'hyam', 'hybm']).squeeze()
+    if 'model_level' in ds_all.coords:
+        ds_all = ds_all.isel(model_level=(-1-model_lev_i_ukesm))
+
+    # ds_all = broadcase_station_data(ds_all, varl_st=varl_st_echam, lon = lon_smr, lat = lat_smr)
+
+    ds_all = change_units_and_compute_vars_ukesm(ds_all)
+
+    
+    
+    
+    delayed_obj = ds_all.to_netcdf(fn_final_ukesm, compute=False)
+    print('hey')
+    with ProgressBar():
+        results = delayed_obj.compute()
+
+# %%
+ds_all['lwp'].quantile(.95)
+
+# %%
+from bs_fdbck.util.BSOA_datamanip.ukesm import get_rndic_ukesm
+
+# %% tags=[]
+ds_all = xr.open_dataset(fn_final_ukesm)
+ds_all['time'].attrs['timezone'] = 'utc'
+
+
+# %% [markdown]
+#
+# #### Add variables from station data to imitate using station measurements
+
+# %%
+model_name_ukesm
+
+# %%
+df_comb_station = dic_df_station[model_name_ukesm][case_name_ukesm]
+
+# %%
+ds_comb_station = df_comb_station.to_xarray()
+ds_comb_station = ds_comb_station.assign_coords(station=[select_station])
+
+# %%
+ds_comb_station
+
+# %%
+ds_all['lwp'].quantile(.95)
+
+# %%
+ds_all['lwp_incld'].quantile(.95)
+
+# %%
+ds_all['conv_lwp'].isel(lat=1, lon=1).plot()
+
+# %%
+ds_all['max_cloud_cover'].isel(lat=1, lon=1).plot()
+
+# %% [markdown]
+# #### Finally produce daily median dataset:
+
+# %%
+dic_ds = dict()
+dic_ds[case_name_ukesm] = ds_all
+
+# %%
+
+# %% [markdown]
+# ##### Controle plots
+
+# %%
+ds_all['lwp_incld'].where(ds_all['max_cloud_cover']>.1).quantile(0.90)
+
+# %%
+ds_all['lwp'].where(ds_all['max_cloud_cover']>.10).quantile(0.95)
+
+# %%
+ds_all['lwp_incld'].where(ds_all['max_cloud_cover']>.10).quantile(0.95)
+
+# %%
+ds_all['lwp'].plot(bins=np.linspace(0, 400, 20), alpha=.5, )
+
+ds_all['lwp_incld'].plot(bins=np.linspace(0, 400, 20), alpha=.5, color='r')
+
+# %%
+f, ax = plt.subplots(1)
+ds_all['lwp'].plot.hist(bins=np.logspace(0, 3.1), alpha=.5, ax=ax)
+ds_all['lwp_incld'].plot.hist(bins=np.logspace(0, 3.1), alpha=.5, ax=ax)
+plt.xscale('log')
+
+# %% [markdown]
+# #### Masking and computing vars
+
+# %% [markdown] tags=[]
+# #### *Mask where cloud fraction is above 10 percent 
+
+# %%
+ds_all['max_cloud_cover'].plot.hist(alpha=.4)
+ds_all['max_cloud_cover'].where(ds_all['max_cloud_cover']>0.1).plot.hist(alpha=.4)
+
+# %% [markdown] tags=[]
+# ##### *Mask if ice water path more than 5% of total water path
+
+# %%
+ds_all = ds_all.where(ds_all['liq_frac_cwp'] > .95)
+
+# %%
+ds_all['max_cloud_cover'].plot.hist(alpha=.4)
+ds_all['max_cloud_cover'].where(ds_all['max_cloud_cover']>0.1).plot.hist(alpha=.4)
+
+# %%
+ds_all = ds_all.where(ds_all['max_cloud_cover']>0.1)
+
+# %% [markdown] tags=[]
+# ### *Mask where cloud top weight less than 10 percent: 
+
+# %%
+ds_all['lwp_incld'].plot.hist(bins=np.linspace(0,800), alpha =.5)
+
+ds_all['lwp_incld'].where(ds_all['weight_of_cdnc_top_cloud']>0.1).plot.hist(bins=np.linspace(0,800), alpha =.5)
+
+# %%
+ds_all = ds_all.where(ds_all['weight_Reff_2d_distrib']>0.1)
+
+# %% [markdown] tags=[]
+# #### Shift timezone
+
+# %%
+
+with ProgressBar():
+    ds_all.load()
+
+if ds_all['time'].attrs['timezone'] == 'utc':
+    ds_all['time'] = ds_all['time'].to_pandas().index - timedelta(hours=4)
+    ds_all['time'].attrs['timezone'] = 'utc-4'
+    print('shifted time by -4')
+    # dic_ds[k] = _ds
+
+# %% [markdown] tags=[]
+# #### Broadcast computed variables so that only station value is in the gridcells. 
+
+# %% tags=[]
+ds_all
+
+# %%
+ds_all['lwp'].where(ds_all['max_cloud_cover']>.10).quantile(0.95)
+
+# %%
+ds_all['lwp_incld'].where(ds_all['max_cloud_cover']>.10).quantile(0.95)
+
+# %%
+ds_smll = ds_all[['qcf']]
+
+# %%
+ds_comb_station = df_comb_station.to_xarray()
+ds_comb_station = ds_comb_station.assign_coords(station=[select_station])
+
+# %% [markdown]
+# ##### Check time by comparing to station dataset
+
+# %%
+lon_station
+
+
+# %%
+_ds = xr.merge([ds_all[['Temp']].sel(lat=lat_station, lon=lon_station, method='nearest'), ds_comb_station[['T_C']]])
+_ds['notnull'] = (_ds['Temp'].notnull()) & (_ds['T_C'].notnull())
+
+# %%
+(_ds['Temp']-273.15).where(_ds['notnull']).plot()
+(_ds['T_C']).where(_ds['notnull']).plot()
+
+
+# %%
+_da = ds_comb_station['T_C'].sel(time=slice('2013','2018'))
+
+# %%
+_da2 = (ds_all['Temp']-273.15).sel(time=slice('2013','2018')).sel(lat=lat_station, lon=lon_station, method='nearest')
+
+# %%
+_da.where(_da2.notnull()).plot()
+_da2.plot()
+
+# %%
+_da.where(_da2.notnull()).groupby(_da['time.hour']).mean().plot()
+_da2.groupby(_da2['time.hour']).mean().plot()
+
+# %%
+df_comb_station['OA_STP'].plot()
+
+# %%
+varl_st_ukesm
+
+
+# %%
+varl_tmp = varl_st_ukesm
+
+varl_tmp = list(set(df_comb_station.columns).intersection(set(varl_tmp)))
+
+# %%
+varl_tmp
+
+# %% tags=[]
+ds_smll = broadcast_vars_in_ds_sel(ds_smll, ds_comb_station, varl_tmp, only_already_in_ds=False)
+
+# %% [markdown]
+# #### Replace all values by station values
+
+# %%
+for v in varl_tmp:
+    ds_all[v] = ds_smll[v]
+
+# %% [markdown]
+# #### Final steps
+
+# %%
+dic_ds = dict()
+dic_ds[case_name_ukesm] = ds_all
+
+# %% [markdown]
+# ##### Rename vars
+
+# %%
+from bs_fdbck.util.BSOA_datamanip import rn_dic_ukesm_cloud
+
+# %%
+rn_dic_ukesm_cloud
+
+# %%
+for key in dic_ds:
+    dic_ds[key] = dic_ds[key].rename(rn_dic_ukesm_cloud)
+
+# %% [markdown]
+# #### Save final csv
+
+# %%
+dic_ds[key]['CWP'].where(ds_all['max_cloud_cover']>.10).quantile(0.95)
+
+# %%
+ds_all['lwp_incld'].where(ds_all['max_cloud_cover']>.10).quantile(0.95)
+
+# %%
+for seas in calc_seasons:
+    _fn_csv = fn_final_ukesm_csv_stem.parent / (fn_final_ukesm_csv_stem.stem + seas + '.csv')
+    print(_fn_csv)
+    if True:  # not _fn_csv.exists():
+        # for key in dic_ds.keys():
+
+        dic_df = get_dic_df_mod(dic_ds, select_hours_clouds=True, summer_months=season2month[seas],
+                                mask_cloud_values=True,
+                                from_hour=daytime_from,
+                                to_hour=daytime_to,
+                                # kwrgs_mask_clouds = dict(min_reff=1,min_cwp =50, tau_bounds = [5,50])
+                                kwrgs_mask_clouds=dict(min_reff=r_eff_lim, min_cwp=cld_water_path_above,
+                                                       tau_bounds=tau_lims),
+
+                                )
+
+        df_mod = dic_df[case_name_ukesm]
+        # with ProgressBar():
+        # df_mod = df_mod.dropna()
+        df_mod.to_csv(_fn_csv)
+
+# %%
+pd.read_csv('/proj/bolinc/users/x_sarbl/analysis/Output_data_BS-FDBCK/extracted_latlon_subset/UKESM/AEROCOMTRAJ/AEROCOMTRAJ_2012-01-01-2019-01-01_ALL-VARS_concat_subs_293.0-308.0_-8.0--1.0ALL_year.csv',index_col=0)
+
+# %%
+_ds = dic_ds['AEROCOMTRAJ']
+_ds = _ds.where(_ds['max_cloud_cover']>0.1)
+
+# %%
+#_ds['computed_lwp_sum'].plot(bins=np.linspace(50,1000), alpha=.5);
+
+#(_ds['computed_lwp_sum']/_ds['max_cloud_cover']).plot(bins=np.linspace(50,1000), alpha=.5);
+
+#_ds['lwp'].plot(bins=np.linspace(50,1000), alpha=.5);
+
+
+(_ds['lwp']/_ds['max_cloud_cover']).plot(bins=np.linspace(50,1000), alpha=.5);
+
+
+
+_ds['CWP'].plot(bins=np.linspace(50,1000), alpha=.5);
+
+# %%
+df_mod['CWP'].quantile(.95)
+
+# %%
+_ds = dic_ds['AEROCOMTRAJ']
+(_ds['CWP']
+ .where(_ds['r_eff']>1)
+ .where(_ds['CWP']>50)
+ .where(_ds['liq_frac_cwp']>0.95)
+ .plot(bins= np.linspace(50,1000))
+)
+
+# %%
+_ds = dic_ds['AEROCOMTRAJ']
+(_ds['CWP']
+ .where(_ds['r_eff']>1)
+ .where(_ds['CWP']>50)
+ .where(_ds['liq_frac_cwp']>0.95)
+ .plot(bins= np.linspace(50,1000))
+)
+
+# %%
+_ds = dic_ds['AEROCOMTRAJ']
+(_ds['lwp']
+ .where(_ds['r_eff2']>1)
+ .where(_ds['CWP']>50)
+ .where(_ds['liq_frac_cwp']>0.95)
+ .quantile(.90)
+)
+
+# %%
+
+_ds = df_mod.to_xarray()
+
+# %%
+_ds['CWP'].plot()
+
+# %%
+_ds['CWP'].isel(lat=0,lon=0).plot(marker='.')
+
+_ds['CWP'].isel(lat=1,lon=1).plot(marker='.')
+
+# %%
+_ds['OA_STP'].isel(lat=0,lon=0).plot()
+
+_ds['OA_STP'].isel(lat=1,lon=1).plot()
+
+# %%
+_ds['OA_STP'].isel(time=270).plot()
+
+# %%
+for i in range(0,50):
+    _ds['OA_STP'].isel(time=(400+i)).plot()
+    plt.show()
+
+# %% [markdown]
+#
+# #### Add variables from station data to imitate using station measurements
+
+# %%
+df_comb_station = dic_df_station['ECHAM-SALSA']['SALSA_BSOA_feedback']
+
+# %%
+print()
+
+# %% [markdown]
+# #### Moved to preprocess: Compute Nx-500
+
+# %%
+
+# %%
+
+# %%
+
+# %%
+
+# %%
+
+# %%
+
+# %%
 
 # %%

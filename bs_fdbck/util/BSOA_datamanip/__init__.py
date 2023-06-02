@@ -30,6 +30,13 @@ rn_dic_ec_earth_cloud = {
     'cdnc_incld_cltop': 'CDNC'
 }
 
+rn_dic_ukesm_cloud = {
+    #'lwp_incld': 'CWP',
+    'lwp_incld': 'CWP',
+    #'TOT_CLD_VISTAU_s_incld': 'COT',
+    'r_eff': 'r_eff',
+    #'ACTNL_incld': 'CDNC',
+}
 rn_dic_noresm_cloud = {
     'TGCLDLWP_incld': 'CWP',
     'TOT_CLD_VISTAU_s_incld': 'COT',
@@ -66,6 +73,7 @@ varl_st_default = ['SOA_NA', 'SOA_A1', 'OM_NI', 'OM_AI', 'OM_AC', 'SO4_NA', 'SO4
                    'T',
                    'T_C',
                    'N500',
+                   'N500_STP',
                    'N100', 'DOD500', 'DOD440',
                    'H2SO4', 'SOA_LV', 'COAGNUCL', 'FORMRATE', 'T',
                    'N500',
@@ -91,7 +99,7 @@ varl_st_default = ['SOA_NA', 'SOA_A1', 'OM_NI', 'OM_AI', 'OM_AC', 'SO4_NA', 'SO4
                    'emiisop', 'emiterp', 'T', 'DDRY_NUS', 'DDRY_AIS', 'DDRY_ACS', 'DDRY_COS', 'DWET_AII',
                    'DWET_ACI', 'DWET_COI', 'N50', 'N70', 'N100', 'N150', 'N200', 'N500', 'N50-500',
                    'N70-500', 'N100-500', 'N150-500', 'N200-500', 'POM', 'SOA', 'SOA2', 'T_C',
-                   'N70-500_STP', 'N100-500_STP', 'N150-500_STP', 'N200-500_STP', 'POM', 'SOA', 'SOA2', 'T_C',
+                   'N70-500_STP', 'N50-500_STP','N100-500_STP', 'N150-500_STP', 'N200-500_STP', 'POM', 'SOA', 'SOA2', 'T_C',
 
                    'POM',
 
@@ -301,42 +309,6 @@ def ds2df_echam(ds_st, model_lev_i=-1,
     return df, df_sm
 
 
-def ds2df_ec_earth(ds_st, model_lev_i=-1,
-                   take_daily_median=True,
-                   summer_months=None,
-                   mask_summer=False,
-                   pressure=None,
-                   temperature=None,
-                   air_density=None
-                   ):
-    # N50, N100 etc:
-    # ds_st = change_units_and_compute_vars_echam(ds_st,
-    #                                            air_density=air_density,
-    #                                            pressure = pressure,
-    #                                            temperature=temperature
-    #                                            )
-
-    if 'lev' in ds_st.dims:
-        ds_st_ilev = ds_st.isel(lev=model_lev_i)
-    else:
-        ds_st_ilev = ds_st
-
-    if take_daily_median:
-        df = calculate_daily_median_summer(ds_st_ilev, summer_months=summer_months)
-        df_sm = calculate_summer_median(df)
-    else:
-        if mask_summer:
-            _ds = mask4summer(ds_st_ilev, months=summer_months)
-        else:
-            _ds = ds_st_ilev
-        _ds['is_JJA'] = _ds['time.month'].isin([6, 7, 8])
-        _ds['is_JA'] = _ds['time.month'].isin([7, 8])
-        _ds['isSummer'] = _ds['time.month'].isin([7, 8])
-        df = _ds.to_dataframe()
-        # df = df[df['isSummer'].notnull()]
-        df_sm = None
-
-    return df, df_sm
 
 
 def change_units_and_compute_vars_echam(ds_st, air_density=None,
@@ -749,6 +721,7 @@ def extract_hours_for_satellite_vars(ds, from_hour, select_hours_clouds, to_hour
 def mask_values_clouds(ds,
                        tau_bounds=None,
                        min_cwp=50,
+                       max_cwp=800,
                        min_reff=5,
                        min_temp=-15,
                        ):
@@ -764,8 +737,8 @@ def mask_values_clouds(ds,
         print('WARNING: COT NOT FOUND, not masking these values!')
     if 'CWP' in ds.data_vars:
         cwp = ds['CWP']
-        ma = (cwp >= min_cwp)
-        print(f'Masking with {min_cwp}<CWP!')
+        ma = (cwp >= min_cwp) & (cwp <= max_cwp)
+        print(f'Masking with {min_cwp}<CWP and {max_cwp}>CWP!')
 
         ds = ds.where(ma)
     else:

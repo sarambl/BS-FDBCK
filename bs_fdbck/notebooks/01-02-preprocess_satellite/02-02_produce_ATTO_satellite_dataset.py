@@ -211,7 +211,7 @@ path_comb_data_full_time =postproc_data /'ATTO_data_comb_hourly.nc'
 ds_observations = xr.open_dataset(path_comb_data_full_time).sel(time_traj=0)
 
 # %%
-ds_observations = ds_observations[['N50-500','N100-500','N200-500','OA']]
+ds_observations = ds_observations[['N50-500','N100-500','N200-500','OA','BC_conc']]
 
 # %%
 ds_observations['day_of_year'] = ds_observations['time.dayofyear']
@@ -237,8 +237,6 @@ ds_observations_med_mean = ds_observations_maskh.resample(time='1D').mean()
 
 # %%
 ds_observations_med_mh = ds_observations_med_mh.drop('time_traj')
-
-# %%
 
 # %%
 ds_sat_hyy['OA'] = ds_observations_med_mh['OA']
@@ -278,6 +276,7 @@ ds_sat_hyy_rn = ds_sat_hyy.rename({'Cloud_Effective_Radius_Liquid_Mean':'CER (mi
 outfilename
 
 # %%
+ds_sat_hyy_rn
 
 # %%
 ds_sat_hyy_rn.to_netcdf(outfilename)

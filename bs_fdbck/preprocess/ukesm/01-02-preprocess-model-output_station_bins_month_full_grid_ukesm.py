@@ -47,7 +47,7 @@ model_name = 'UKESM'
 # ## Settings:
 
 # %%
-from_t = '2013-01-01'
+from_t = '2012-01-01'
 to_t = '2019-01-01'
 
 # %% [markdown]

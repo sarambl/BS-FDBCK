@@ -14,7 +14,10 @@
 #     name: python3
 # ---
 
-# %% tags=[]
+# %%
+
+# %load_ext autoreload
+# %autoreload 2
 import xarray as xr
 
 import pandas as pd
@@ -29,8 +32,8 @@ import pandas as pd
 
 from bs_fdbck.constants import path_measurement_data
 
-# %load_ext autoreload
-# %autoreload 2
+# # %load_ext autoreload
+# # %autoreload 2
 
 from bs_fdbck.util.BSOA_datamanip import compute_total_tau, broadcase_station_data, change_units_and_compute_vars, \
     get_dic_df_mod
@@ -43,9 +46,6 @@ import matplotlib.cm as cm
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 
-# %%
-# %load_ext autoreload
-# %autoreload 2
 
 
 # %% [markdown]
@@ -253,8 +253,9 @@ df_hyy_1
 model_name_noresm = 'NorESM'
 model_name_echam  = 'ECHAM-SALSA' 
 model_name_ec_earth  = 'EC-Earth' 
+model_name_ukesm  = 'UKESM' 
 
-models =[model_name_noresm,model_name_echam,model_name_ec_earth]
+models =[model_name_noresm,model_name_echam,model_name_ec_earth,model_name_ukesm]
 
 
 # %% [markdown] tags=[]
@@ -267,6 +268,9 @@ def lon_sh(l):
 def lon_sh360(l):
     return ((l)%360)
 
+
+# %%
+models
 
 # %%
 l=-10
@@ -317,7 +321,7 @@ case_name_noresm = 'OsloAero_intBVOC_f09_f09_mg17_fssp245'
 
 
 # %% [markdown]
-# #### Input files created in [02-create_file-long_sum.ipynb](02-create_file-long_sum)
+# #### Input files created in [01-01-create_file-ALL_year_new_version.ipynb](01-01-create_file-ALL_year_new_version.ipynb)
 
 # %% [markdown] tags=[]
 # #### Input files
@@ -402,6 +406,47 @@ fn_final_ec_earth_csv
 # %%
 cases_ec_earth = [case_name_ec_earth]
 
+# %%
+
+# %% [markdown] tags=[]
+# ### UKESM
+
+# %%
+
+case_name = 'AEROCOMTRAJ'
+case_name_ukesm = 'AEROCOMTRAJ'
+time_res = 'hour'
+space_res='locations'
+model_name='UKESM'
+model_name_ukesm ='UKESM'
+
+
+# %% [markdown] tags=[]
+# #### Define some strings for files
+
+# %%
+str_from_t = pd.to_datetime(from_time1).strftime('%Y%m')
+str_to = pd.to_datetime(to_time2).strftime('%Y%m')
+
+
+# %% [markdown]
+# #### Input files:
+
+# %%
+input_path_ukesm = path_extract_latlon_outdata / model_name_ukesm/ case_name_ukesm
+
+# %%
+
+# %%
+fn_final_ukesm = input_path_ukesm / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}.nc'
+fn_final_ukesm_csv = input_path_ukesm / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}ALL_year.csv'
+
+# %%
+fn_final_ukesm_csv
+
+# %%
+cases_ukesm = [case_name_ukesm]
+
 # %% [markdown]
 # ### Read in model data
 
@@ -413,10 +458,12 @@ df_mod_echam['month'] =df_mod_echam.index.get_level_values(0).month
 df_mod_ec_earth = pd.read_csv(fn_final_ec_earth_csv, index_col=[0,1,2], parse_dates=[0] )
 df_mod_ec_earth['month'] =df_mod_ec_earth.index.get_level_values(0).month
 
+df_mod_ukesm = pd.read_csv(fn_final_ukesm_csv, index_col=[0,1,2], parse_dates=[0] )
+df_mod_ukesm['month'] =df_mod_ukesm.index.get_level_values(0).month
 
 
 # %%
-df_mod_ec_earth.to_xarray()
+df_mod_ukesm.to_xarray()
 
 # %% [markdown]
 # ## Pick out months:
@@ -426,6 +473,9 @@ df_mod_noresm = df_mod_noresm[df_mod_noresm['month'].isin(season2month[season])]
 df_mod_echam = df_mod_echam[df_mod_echam['month'].isin(season2month[season])]
 df_mod_ec_earth = df_mod_ec_earth[df_mod_ec_earth['month'].isin(season2month[season])]
 
+# %%
+df_mod_echam['cl_time_ct'].plot.hist()
+
 # %% [markdown]
 # ### Organize data in dictionary
 
@@ -434,26 +484,29 @@ dic_df=dict()
 dic_df[model_name_echam] = df_mod_echam
 dic_df[model_name_noresm] = df_mod_noresm
 dic_df[model_name_ec_earth] = df_mod_ec_earth
+dic_df[model_name_ukesm] = df_mod_ukesm
+
 dic_df['Observations'] = df_hyy_1
 
 
 
+# %% [markdown] tags=[]
+# ### Not included anymore: *Scale CWP down for EC-Earth
+
 # %% [markdown]
-# ### *Scale CWP down for EC-Earth
+# _df = dic_df[model_name_ec_earth]
+# _df = _df.rename({'CWP':'CWP_orig'}, axis=1)
+# dic_df[model_name_ec_earth]  = _df
 
-# %%
-_df = dic_df[model_name_ec_earth]
-_df = _df.rename({'CWP':'CWP_orig'}, axis=1)
-dic_df[model_name_ec_earth]  = _df
-
-# %%
-_df = dic_df[model_name_ec_earth]
-
-if 'scaled' not in _df.columns:
-    _df['CWP'] = _df['CWP_orig']*.7
-    
-    _df['scaled'] = True
-dic_df[model_name_ec_earth]  = _df
+# %% [markdown]
+# _df = dic_df[model_name_ec_earth]
+#
+# if 'scaled' not in _df.columns:
+#     _df['CWP'] = _df['CWP_orig']*.7
+#     
+#     _df['scaled'] = True
+#     print('scaling CWP in EC-Earth')
+# dic_df[model_name_ec_earth]  = _df
 
 # %% [markdown]
 # ## Check everythign is fine:
@@ -468,7 +521,20 @@ for mod in dic_df.keys():
 #
 
 # %%
+dic_df[model_name_echam]['cl_time_ct'].plot.hist()
+
+# %%
 rn_dic_echam = {
+    #'cwp'      : 'CWP',
+   # 'cwp_incld'      : 'CWP',
+   # 'cod'      : 'COT',
+    #'ceff_ct'  : 'r_eff',
+   # 'ceff_ct_incld'  : 'r_eff',
+    'OA_STP':'OA',
+    
+
+}
+rn_dic_ukesm = {
     #'cwp'      : 'CWP',
    # 'cwp_incld'      : 'CWP',
    # 'cod'      : 'COT',
@@ -500,6 +566,7 @@ model2rndic = {
     model_name_noresm : rn_dic_noresm,
     model_name_ec_earth: rn_dic_ec_earth,
     model_name_echam:rn_dic_echam,
+    model_name_ukesm:rn_dic_ukesm,
     'Observations': rn_dic_obs
 }
 
@@ -511,8 +578,13 @@ dic_df.keys()
 
 
 # %%
+models
+
+# %%
 for mod in models+ ['Observations']:
     _rn_dic = model2rndic[mod]
+    print(mod)
+    print(_rn_dic)
     if ('OA' in dic_df[mod].columns) & ('OA_STP' in dic_df[mod].columns):
         if ('OA_STP' in _rn_dic):
             if (_rn_dic['OA_STP']=='OA'):
@@ -521,10 +593,16 @@ for mod in models+ ['Observations']:
     dic_df[mod] = dic_df[mod].rename(_rn_dic, axis=1)
 
 # %%
+models
+
+# %%
 for mod in dic_df.keys():
     print(mod)
     print(dic_df[mod].to_xarray())
 
+
+# %%
+dic_df[model_name_echam]['cl_time_ct'].plot.hist()
 
 # %% [markdown] tags=[]
 # ## Group by cloud water path 
@@ -537,6 +615,7 @@ dic_bins = dict()
 dic_bins[model_name_noresm] = pd.IntervalIndex.from_breaks([   50,  80,  110, 140, 170, 200,230, 500])
 dic_bins[model_name_echam] = pd.IntervalIndex.from_breaks([   50,  80,  110, 140, 170, 200,230, 500])
 dic_bins[model_name_ec_earth] = pd.IntervalIndex.from_breaks([   50,  80,  110, 140, 170, 200,230, 500])
+dic_bins[model_name_ukesm] = pd.IntervalIndex.from_breaks([   50,  80,  110, 140, 170, 200,230, 500])
 dic_bins['Observations'] = pd.IntervalIndex.from_breaks([   50,  80,  110, 140, 170, 200,230, 500])
 
 
@@ -549,11 +628,6 @@ dic_bins['Observations'] = pd.IntervalIndex.from_breaks([   50,  80,  110, 140, 
 # ### moved to pre-processing: NorESM: Masking if less than 5% liquid cloud top fraction and if liquid is less than 80% of the cloud top
 
 # %% [markdown]
-# df_mod = dic_df[model_name_noresm]
-# mask_liq_cloudtop = (df_mod['FCTL']>0.05) & (df_mod['FCTL']/(df_mod['FCTL']+df_mod['FCTI'])>.8)
-#
-# df_mod.loc[:,'mask_liq_cloudtop'] = mask_liq_cloudtop
-# dic_df[model_name_noresm] = df_mod[mask_liq_cloudtop]
 
 
 # %% [markdown]
@@ -568,38 +642,19 @@ varl_categories = ['OA']#,'CLDFREE'
 varlist_notna = ['OA','CWP','COT','r_eff']
 varlist_notna_noCOT = set(varlist_notna)-set(['COT'])
 
-# %%
-dic_df['EC-Earth']['N100-500_STP']
-
-# %%
-dic_df.keys()
-ds_ec = dic_df['EC-Earth'].to_xarray()
-
-# %%
-a = dic_df['NorESM'].T.duplicated()
-
-# %%
-a.index
-
-# %%
-ds_no = dic_df['NorESM'].to_xarray()
-
-# %%
-dic_df[model_name_echam]
-
 # %% tags=[]
-n_bins = 6
+n_bins = 7
 
 for model_name in dic_df.keys():
 
     print(model_name)
-    df_mod = dic_df[model_name]
+    df_mod = dic_df[model_name].copy()
     ## drop nans:
-    if model_name =='EC-Earth':
+    if model_name in ['UKESM','EC-Earth']:
         _vl = varlist_notna_noCOT
     else:
         _vl = varlist_notna
-    df_mod = df_mod[df_mod[_vl].notna()]
+    df_mod = df_mod[df_mod[_vl].replace([np.inf, -np.inf], np.nan).notna().all(axis=1)]
 
 
     for v in varl_categories:
@@ -618,7 +673,7 @@ for model_name in dic_df.keys():
 
         df_mod[f'{v}_low'] = df_mod[v]<q34
         df_mod[f'{v}_high']= df_mod[v]>q66
-        mid_range = ( df_mod[v].quantile(.34)<df_mod[v]) & (df_mod[v]<df_mod[v].quantile(.66))
+        mid_range = ( q34<df_mod[v]) & (df_mod[v]<q66)
         df_mod[f'{v}_mid_range'] = mid_range
         df_mod=df_mod.assign(**{f'{v}_category': pd.NA})
         df_mod.loc[df_mod[f'{v}_high'], f'{v}_category'] = f'{v} high'
@@ -636,7 +691,7 @@ for model_name in dic_df.keys():
     
     labels = np.arange(n_bins)
     # bins from 5th to 95th percentile
-    qants = df_mod['CWP'].quantile([.0,.90])
+    qants = df_mod['CWP'].quantile([.0,.95])
     bins2 = pd.interval_range(qants.iloc[0], qants.iloc[1], periods=n_bins)
     bins2.values[-1] = pd.Interval(bins2[-1].left,np.inf)
     bins2.values[0] = pd.Interval(0,bins2[0].right)
@@ -660,6 +715,22 @@ for model_name in dic_df.keys():
 
 
 # %%
+dic_df.keys()
+ds_ec = dic_df['EC-Earth'].to_xarray()
+
+# %%
+a = dic_df['NorESM'].T.duplicated()
+
+# %%
+a.index
+
+# %%
+ds_no = dic_df['NorESM'].to_xarray()
+
+# %%
+dic_df[model_name_ec_earth]['OA']
+
+# %%
 OA_percentile_df = pd.DataFrame(dic_OA_percentiles).T
 OA_percentile_df['diff'] = OA_percentile_df['66th']- OA_percentile_df['33rd']
 
@@ -670,6 +741,7 @@ print(fn)
 OA_percentile_df
 
 # %%
+dic_df[model_name_echam]['cl_time_ct'].plot.hist()
 
 # %%
 OA_percentile_df
@@ -684,6 +756,9 @@ for key in dic_df.keys():
     df_mod['CWP_qcutl'] = df_mod['CWP_qcut'].apply(lambda x:x.mid)
     dic_df[key] = df_mod
 
+
+# %%
+pd.qcut(df_mod['CWP'][df_mod['CWP']<np.inf], 6)
 
 # %% [markdown]
 # # Distribution plots:
@@ -707,7 +782,7 @@ for key in dic_df.keys():
     #_df.reset_index()['time'].unique().plot()
 
 # %%
-fig, axs = plt.subplots(4,1, sharex=True, figsize =[6,6])
+fig, axs = plt.subplots(5,1, sharex=True, figsize =[6,6])
 v_x = 'COT'
 x_cut = 100
 v_hue = 'OA_category'
@@ -717,7 +792,7 @@ _palette = palette_OA#cmap_list[0:2]
 
 
 for key, ax in zip(dic_df.keys(), axs):
-    if key=='EC-Earth':
+    if key in ['EC-Earth','UKESM']:
         continue
     _df = dic_df[key].copy()
     _df = _df[_df[v_x]<x_cut]
@@ -768,10 +843,83 @@ fig.savefig(fn.with_suffix('.pdf'), dpi=150)
 
 
 # %%
-fig, axs = plt.subplots(4,1, sharex=True, figsize =[6,6])
-_bins = np.linspace(0,400)
+_df = dic_df['UKESM'].copy()
+_df.columns
+
+# %%
+fig, axs = plt.subplots(5,1, sharex=True, figsize =[6,6])
+_bins = np.linspace(0,800)
 v_x = 'CWP'
-x_cut = 500
+x_cut = 800
+v_hue = 'OA_category'
+hue_order=['OA low', 'OA high'][::-1]
+
+_palette = palette_OA#cmap_list[0:2]
+
+
+for key, ax in zip(dic_df.keys(), axs):
+    _df = dic_df[key].copy()
+    _df = _df[_df[v_x]<x_cut]
+
+    sns.histplot(
+        x=v_x,
+        data=_df,
+        hue=v_hue,
+        hue_order=hue_order,
+        palette=_palette,
+        legend=False,
+        edgecolor='w',
+        ax = ax,
+        bins = _bins,
+    )
+    if (key=='EC-Earth') and ('scaled' in _df.columns):
+        title = f'{key}$\cdot$0.7'
+    else:
+        title = key
+#plt.ylim([0,250])
+    ax.set_title(title)#'Observations')
+
+
+
+custom_lines = [Line2D([0], [0], color=cmap_list[0], lw=4),
+                Line2D([0], [0], color=cmap_list[1], lw=4),
+               # Line2D([0], [0], color=cmap(1.), lw=4)
+
+               ]
+
+leg_els = [
+
+    Patch(edgecolor='w',alpha = .5, facecolor=_palette[1], label='OA low'),
+    Patch(edgecolor=None, alpha = .5,facecolor=_palette[0], label='OA high'),
+
+]
+
+ax.legend(handles = leg_els, frameon=False)
+ax.set_xlabel('Cloud water path(g $m^{-2}$)')
+
+#plt.ylim([0,250])
+print(len(_df))
+sns.despine(fig)
+
+fn = make_fn('echam_noresm', v_x,'obs',comment='distribution')
+
+#fig.savefig(fn, dpi=150)
+fig.tight_layout()
+fn = make_fn('mod_obs', v_x,'count',comment='distribution', distplot=True)
+print(fn)
+
+#fig.savefig(fn, dpi=150)
+fig.tight_layout()
+fig.savefig(fn, dpi=150)
+fig.savefig(fn.with_suffix('.pdf'), dpi=150)
+
+
+
+# %% tags=[]
+fig, axs = plt.subplots(5,1, sharex=True, figsize =[6,6])
+_bins = np.linspace(0,600)
+v_x = 'CWP'
+x_cut = 600
 v_hue = 'OA_category'
 hue_order=['OA low', 'OA high'][::-1]
 
@@ -837,7 +985,7 @@ fig.savefig(fn.with_suffix('.pdf'), dpi=150)
 
 
 # %%
-fig, axs = plt.subplots(4,2,  figsize =[6,6], sharex=True, sharey=True)
+fig, axs = plt.subplots(5,2,  figsize =[6,6], sharex=True, sharey=True)
 
 v_x = 'CWP'
 v_y = 'COT'
@@ -849,7 +997,8 @@ _palette = palette_OA#cmap_list[0:2]
 
 
 for i, key in enumerate(dic_df.keys()):
-    if key=='EC-Earth':
+    if key in ['EC-Earth','UKESM']:
+    
         continue
     axs_sub = axs[i,:]
     for hue_v, ax in zip(hue_order, axs_sub):
@@ -908,7 +1057,7 @@ fig.tight_layout()
 
 
 # %%
-fig, axs = plt.subplots(4,2,  figsize =[6,6], sharex=True, sharey=True)
+fig, axs = plt.subplots(5,2,  figsize =[6,6], sharex=True, sharey=True)
 
 v_x = 'CWP'
 v_y = 'r_eff'
@@ -984,7 +1133,7 @@ fig.tight_layout()
 hue_v = 'OA high'
 
 # %%
-fig, axs = plt.subplots(4,1,  figsize =[6,12], sharex=True, sharey=True)
+fig, axs = plt.subplots(5,1,  figsize =[6,12], sharex=True, sharey=True)
 
 v_x = 'CWP'
 v_y = 'COT'
@@ -996,7 +1145,8 @@ _palette = palette_OA[::-1]#cmap_list[0:2]
 
 
 for ax, key in zip(axs, dic_df.keys()):
-    if key=='EC-Earth':
+    if key in ['EC-Earth','UKESM']:
+        
         continue
     #for hue_v, ax in zip(hue_order, axs):
     _df = dic_df[key].copy()
@@ -1057,7 +1207,7 @@ for ax in axs:
     ax.set_ylim([0,40])    
 
 # %%
-fig, axs = plt.subplots(4,1,  figsize =[6,12], sharex=True, sharey=True)
+fig, axs = plt.subplots(5,1,  figsize =[6,12], sharex=True, sharey=True)
 
 v_x = 'r_eff'
 v_y = 'COT'
@@ -1069,7 +1219,7 @@ _palette = palette_OA[::-1]#cmap_list[0:2]
 
 
 for ax, key in zip(axs, dic_df.keys()):
-    if key =='EC-Earth':
+    if key in ['EC-Earth','UKESM']:
         continue
     #for hue_v, ax in zip(hue_order, axs):
     _df = dic_df[key].copy()
@@ -1131,7 +1281,7 @@ for ax in axs:
     ax.set_ylim([0,55])    
 
 # %%
-fig, axs = plt.subplots(4,1,  figsize =[6,12], sharex=True, sharey=True)
+fig, axs = plt.subplots(5,1,  figsize =[6,12], sharex=True, sharey=True)
 
 v_y = 'r_eff'
 v_x = 'CWP'
@@ -1192,10 +1342,10 @@ fig.tight_layout()
 fn = make_fn('mod_obs', v_x,'count',comment='distribution', distplot=True)
 print(fn)
 
-#fig.savefig(fn, dpi=150)
+# fig.savefig(fn, dpi=150)
 fig.tight_layout()
-#fig.savefig(fn, dpi=150)
-#fig.savefig(fn.with_suffix('.pdf'), dpi=150)
+# fig.savefig(fn, dpi=150)
+# fig.savefig(fn.with_suffix('.pdf'), dpi=150)
 
 for ax in axs:
     ax.set_xlim([0,400])
@@ -1206,20 +1356,21 @@ for ax in axs:
 # %%
 
 # %%
+dic_df[model_name_echam]['cl_time_ct'].plot.hist()
+
+# %%
 s = dic_df[model_name_echam]['r_eff']#*dic_df[model_name_echam]['cl_time']
 s = s[0<s]
 len(s[s.notna()])
 
 # %%
-len(dic_df['ECHAM-SALSA'].dropna())
-
-# %%
+len(dic_df['ECHAM-SALSA'])
 
 # %%
 len(dic_df['NorESM'].dropna())
 
 # %%
-fig, axs = plt.subplots(4,1, sharex=True, figsize =[6,6], dpi=100)
+fig, axs = plt.subplots(5,1, sharex=True, figsize =[6,6], dpi=100)
 
 v_x = 'r_eff'
 x_cut = 700
@@ -1286,43 +1437,10 @@ fig.savefig(fn.with_suffix('.pdf'), dpi=150)
 
 
 # %%
-dic_df[model_name_echam]
-
-# %% [markdown]
-# df_ec_earth = dic_df['EC-Earth']
-# df_ec_earth = df_ec_earth[df_ec_earth['r_eff']>=5]
-# dic_df['EC-Earth'] = df_ec_earth
-
-# %%
 ds_ech = dic_df['ECHAM-SALSA'].to_xarray()
 
 # %%
 ds_nor = dic_df['NorESM'].to_xarray()
-
-# %%
-(ds_ech['tempair_ct'].mean('time')-273.15).plot()
-
-# %% tags=[]
-ds_ech
-
-# %%
-ds_ech
-
-# %%
-ds_nor['COT'].count()
-
-# %%
-ds_ech
-
-# %%
-dic_df[model_name_echam]['cl_time_ct'].plot.hist()
-
-# %%
-dic_df[model_name_echam] = dic_df[model_name_echam][dic_df[model_name_echam]['cl_time_ct']>0.9]
-dic_df[model_name_echam]
-
-# %% [markdown]
-# dic_df[model_name_echam] = dic_df[model_name_echam][dic_df[model_name_echam]['r_eff']>5]
 
 # %% [markdown] tags=[]
 # # Calculate difference between high OA and low
@@ -1412,7 +1530,7 @@ for ax, y_var in zip(axs,[y_var1, y_var2]):
     dic_median_CI[y_var] = dict()
     for key in dic_df.keys():
         print(key)
-        if (key =='EC-Earth') and (y_var=='COT'):
+        if (key in ['EC-Earth', 'UKESM']) and (y_var=='COT'):
             continue
         _df = dic_df[key].copy()
     
@@ -1470,6 +1588,10 @@ for source in dic_median_CI[v].keys():
 
 
 # %%
+dic_median_CI['r_eff'].keys()
+
+
+# %%
 v = 'r_eff'
 for source in dic_median_CI[v].keys():
     print(source)
@@ -1502,6 +1624,7 @@ markersize= 2
 fig, axs_all = plt.subplots(3,1,figsize=figsize, sharey='row', sharex='col', dpi=200, gridspec_kw={'height_ratios': [1, 7, 7]})
 
 ax_num =axs_all[0]
+ax_num_ukesm =axs_all[0].twiny()
 axs = axs_all[[1,2]]
 
 x_var = 'CWP_cut2lm'
@@ -1514,13 +1637,22 @@ ylab2 = r'$\Delta r_e$ [$\mu$ m]'
 y_pos = 0
 
 
-ax = axs[0]
-for ax, y_var in zip(axs,[y_var1, y_var2]):
+
+
+
+for ax_use, y_var in zip(axs,[y_var1, y_var2]):
     
     
     for key in dic_df.keys():
-        if (key=='EC-Earth') and (y_var =='COT'):
+        if (key in ['EC-Earth', 'UKESM']) and (y_var =='COT'):
             continue
+        if key=='UKESM':
+            ax = ax_use.twiny()
+            ax.set_xlabel('UKESM', color=cdic_model[key], fontsize=10)  # we already handled the x-label with ax1
+            ax.tick_params(axis='x', labelcolor=cdic_model[key])
+
+        else: 
+            ax = ax_use
         diff_med = dic_median_CI[y_var][key]['sample_median']
         df_sample_quant = dic_median_CI[y_var][key]['bootstrap_quant']
         df_number = dic_median_CI[y_var][key]['number']
@@ -1528,8 +1660,8 @@ for ax, y_var in zip(axs,[y_var1, y_var2]):
         df_bootstrap_med = df_sample_quant.loc[0.5]
         plt_med = diff_med[y_var]
         label = key
-        if key=='EC-Earth':
-            label = f'{key}, 0.7CWP'
+        #if key=='EC-Earth':
+        #    label = f'{key}, 0.5CWP'
         ax.scatter(plt_med.index, plt_med, ec=cdic_model[key],lw=2, label=label,s=50,fc='none')
         ax.plot(plt_med.index, plt_med, c=cdic_model[key],lw=1, label='__nolegend__',zorder=-20,
                alpha=.2)
@@ -1548,19 +1680,33 @@ for ax, y_var in zip(axs,[y_var1, y_var2]):
         #ax.text(df_numb.index, 
 
         for xi in df_number.index:
+            
             si = df_number.loc[xi]['n_str']
+            if key=='UKESM':
+                xi = xi*((ax_use.get_xlim()[1]-ax_use.get_xlim()[0])/(ax.get_xlim()[1]-ax.get_xlim()[0]))
+                print('hey')
+                #ax_num_ukesm.text(xi, y_pos, si,
+                #    c = cdic_model[key],
+                #        fontsize=6,
+                #    horizontalalignment='center',
+                #        alpha=.7,
+                #   )
+            #else:
             ax_num.text(xi, y_pos, si,
                     c = cdic_model[key],
                         fontsize=6,
                     horizontalalignment='center',
                         alpha=.7,
-                   )
+                           )
         #            transform=ax.transAxes,)
         y_pos -=.22
         
 ax_num.xaxis.set_visible(False)
+ax_num_ukesm.xaxis.set_visible(False)
 ax_num.yaxis.set_visible(False)
+ax_num_ukesm.yaxis.set_visible(False)
 sns.despine(ax=ax_num,right=True, left = True, bottom=True, top=True)
+sns.despine(ax=ax_num_ukesm,right=True, left = True, bottom=True, top=True)
 for ax in axs:
     ax.axhline(0, c='.5',zorder=-10,lw=1, linestyle='--')
     
@@ -1580,6 +1726,126 @@ sns.despine(ax = axs[0])
 sns.despine(ax = axs[1])
 fn = make_fn(hue_var, y_var1,x_var,comment=f'{y_var2}_diff_median', relplot=True)
 print(fn) 
+#fig.savefig(fn, dpi=150)
+#fig.tight_layout()
+fig.savefig(fn, dpi=150)
+fig.savefig(fn.with_suffix('.pdf'), dpi=150)
+plt.show()
+
+### Grid box avg
+
+# %%
+'/\n'.join(si.split('/'))
+
+# %% tags=[]
+figsize = [6,8]
+_palette = palette_OA_2
+ylim = None#[0,25]
+alpha_err=0.4
+hue_lan_high= ['OA low', 'OA high']
+hue_var = 'OA_category'
+
+ylim2 =None# [-4,4]
+markersize= 2
+
+fig, axs_all = plt.subplots(4,1,figsize=figsize, sharey='row', sharex='col', dpi=200, 
+                            gridspec_kw={'height_ratios': [1, 7, 1,7]})
+
+ax_num =axs_all[0]
+ax_num2 = axs_all[2]
+axs = axs_all[[1,3]]
+
+x_var = 'CWP_cut2lm'
+
+y_var1 = 'COT'
+y_var2 = 'r_eff'
+
+ylab1 = r'$\Delta $ Cloud optical depth []'
+ylab2 = r'$\Delta r_e$ [$\mu$ m]'
+y_pos1 = .8
+y_pos2 = .8
+
+models_and_obs = list(dic_df.keys())
+ax = axs[0]
+for ax, y_var in zip(axs,[y_var1, y_var2]):
+    
+    
+    for key in models_and_obs:
+        if (key in ['EC-Earth', 'UKESM']) and (y_var =='COT'):
+            continue
+        diff_med = dic_median_CI[y_var][key]['sample_median']
+        df_sample_quant = dic_median_CI[y_var][key]['bootstrap_quant']
+        df_number = dic_median_CI[y_var][key]['number']
+
+        df_bootstrap_med = df_sample_quant.loc[0.5]
+        plt_med = diff_med[y_var]
+        label = key
+        #if key=='EC-Earth':
+        #    label = f'{key}, 0.5CWP'
+        ax.scatter(plt_med.index, plt_med, ec=cdic_model[key],lw=2, label=label,s=50,fc='none')
+        ax.plot(plt_med.index, plt_med, c=cdic_model[key],lw=1, label='__nolegend__',zorder=-20,
+               alpha=.2)
+        #ax.scatter(df_bootstrap_med.index, df_bootstrap_med, c=cdic_model[key], label=key,s=200, marker='x')
+
+        df_sample_quant_CI= df_sample_quant.drop(labels=0.5).T
+        yerr = np.abs(df_sample_quant_CI.T - plt_med)
+        
+        ax.errorbar(plt_med.index, plt_med, yerr=yerr.values, 
+                    #capsize=5,capthick=2,
+                    c=cdic_model[key], linewidth=0, elinewidth=3, alpha=alpha_err,zorder=0)
+        
+        if y_var !=y_var2:
+            continue
+        df_number['n_str'] = df_number['n_low'].astype(str) + '/' + df_number['n_high'].astype(str) 
+        #ax.text(df_numb.index, 
+        if key in ['NorESM','ECHAM-SALSA', 'Observations']:
+            _ax_num = ax_num
+            y_pos1 -=.44
+            y_pos = y_pos1
+        else:
+            _ax_num = ax_num2     
+            y_pos2 -=.44
+            y_pos = y_pos2
+        for xi in df_number.index:
+            si = df_number.loc[xi]['n_str']
+            si = '/\n'.join(si.split('/'))
+
+            _ax_num.text(xi, y_pos, si,
+                    c = cdic_model[key],
+                        fontsize=6,
+                    horizontalalignment='center',
+                        alpha=.7,
+                        zorder=1000000,
+                   )
+        #if key == models_and_obs[2]:
+        #    y_pos = 0
+        #else:
+        y_pos -=.44
+for _ax in [ax_num, ax_num2]:
+    _ax.xaxis.set_visible(False)
+    _ax.yaxis.set_visible(False)
+    sns.despine(ax=_ax,right=True, left = True, bottom=True, top=True)
+for ax in axs:
+    ax.axhline(0, c='.5',zorder=-10,lw=1, linestyle='--')
+    
+axs[0].set_ylabel(ylab1)
+axs[1].set_ylabel(ylab2)
+axs[1].set_ylim(ylim2)
+
+axs[1].set_xlabel('CWP [g m$^{-2}$]')
+
+ax.legend(frameon=False)
+
+ax_num.set_title(f'Difference between high OA and low OA: {season}')
+
+#ax_num.set_ylim([0,1])
+
+sns.despine(ax = axs[0])
+sns.despine(ax = axs[1])
+fn = make_fn(hue_var, y_var1,x_var,comment=f'{y_var2}_diff_median', relplot=True)
+print(fn) 
+#for ax in axs:
+#    ax.set_xlim([50,450])
 
 #fig.savefig(fn, dpi=150)
 #fig.tight_layout()
@@ -1881,7 +2147,7 @@ for key,ax in zip(order_keys, axs[1,:]):
         #kind='boxen',
         ax = ax,
         palette=_palette,
-           )
+    )
 
 
     
