@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="On explicit save action" serverName="tetralish_archive" exclude=".svn;.cvs;.idea;.DS_Store;.git;.hg;*.hprof;*.pyc;.ipynb_checkpoints;" showNewOnSourceInSync="false">
+  <component name="PublishConfigData" autoUpload="On explicit save action" serverName="tetralish_archive" exclude=".svn;.cvs;.idea;.DS_Store;.git;.hg;*.hprof;*.pyc;.ipynb_checkpoints;" showEqualInSync="true">
     <serverData>
       <paths name="tetralish_archive">
         <serverdata>
