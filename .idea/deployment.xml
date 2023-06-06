@@ -6,7 +6,7 @@
       <paths name="tetralish_archive">
         <serverdata>
           <mappings>
-            <mapping deploy="/analysis/BS-FDBCK" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/analysis/BS-FDBCK_clean" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>

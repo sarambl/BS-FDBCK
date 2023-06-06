@@ -3,5 +3,4 @@
 
 
 ## TODO:
-- new branch with only paper content.
 - 
