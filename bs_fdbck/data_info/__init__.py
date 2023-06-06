@@ -6,7 +6,6 @@ from bs_fdbck.constants import path_data_info
 
 path_area_defs = Path(path_data_info) / 'area_defs.csv'
 path_case_overview = Path(path_data_info) / 'case_overview.csv'
-print(path_area_defs)
 
 
 # %%

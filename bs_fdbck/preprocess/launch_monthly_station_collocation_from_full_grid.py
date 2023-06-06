@@ -47,8 +47,8 @@ def update_stat_proc(r):
 
 
 # %%
-def launch_monthly_station_output(case, issectional, max_launches=3, from_time='2008-01-01', to_time='2009-01-01',
-                                  history_field='.h1.'):
+def launch_monthly_station_output_noresm(case, issectional, max_launches=3, from_time='2008-01-01', to_time='2009-01-01',
+                                         history_field='.h1.'):
     """
     Launch a number of processes to calculate monthly files for file.
     :param history_field:
@@ -63,10 +63,10 @@ def launch_monthly_station_output(case, issectional, max_launches=3, from_time='
     l_df = setup_df_to_track_progress(from_time, to_time)
     pyf = sys.executable  # "/persistent01/miniconda3/envs/env_sec_v2/bin/python3"
     if history_field == '.h2.':
-        file = package_base_path / 'bs_fdbck' / 'preprocess' / 'subproc_station_output_full_grid_h2.py'
+        file = package_base_path / 'bs_fdbck' / 'preprocess' /'noresm'/ 'subproc_station_output_full_grid_h2.py'
 
     else:
-        file = package_base_path / 'bs_fdbck' / 'preprocess' / 'subproc_station_output_full_grid.py'
+        file = package_base_path / 'bs_fdbck' / 'preprocess' / 'noresm'/'subproc_station_output_full_grid.py'
     # while loop:
     notdone = True
     while notdone:

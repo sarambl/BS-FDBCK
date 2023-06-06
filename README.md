@@ -40,8 +40,7 @@ Edit paths at the top of [bs_fdbck/constants.py](bs_fdbck/constants.py).
 ```bash
 cd bs_fdbck/preprocess/
 python Nd.py
-python preproc_maps.py
-python preproc_maps.py
+
 ```
 
 ### Run notebooks:

@@ -64,7 +64,7 @@ def launch_monthly_station_output(case, issectional, max_launches=10, from_time=
     l_df['status'] = l_df.apply(update_stat_proc, axis=1)
     check_stat_proc(l_df)
     pyf = sys.executable  # "/persistent01/miniconda3/envs/env_sec_v2/bin/python3"
-    file = package_base_path / 'bs_fdbck'/'preprocess'/'subproc_station_output.py'
+    file = package_base_path / 'bs_fdbck'/'preprocess'/'noresm'/'subproc_station_output.py'
     # while loop:
     notdone = True
     while notdone:

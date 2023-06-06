@@ -1,19 +1,14 @@
 # %%
-from pathlib import Path
-
-import xarray as xr
-
-from bs_fdbck.constants import get_input_datapath, path_extract_latlon_outdata, path_data_info
-
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 import pandas as pd
 import useful_scit.util.log as log
 
-from bs_fdbck.util.imports.import_fields_xr_ec_earth import get_file_subset_EC_Earth
-from bs_fdbck.util.imports.import_fields_xr_ukesm import filelist_ukesm, get_pathlist_and_rndic_ukesm
+from bs_fdbck.constants import get_input_datapath, path_extract_latlon_outdata
+from bs_fdbck.util.imports.import_fields_xr_ukesm import get_pathlist_and_rndic_ukesm
 
 log.ger.setLevel(log.log.INFO)
 
@@ -121,7 +116,7 @@ def launch_ncks(comms, max_launches=5):
     l_df['status'] = l_df.apply(update_stat_proc, axis=1)
     check_stat_proc(l_df)
     # pyf = sys.executable  # "/persistent01/miniconda3/envs/env_sec_v2/bin/python3"
-    # file = package_base_path / 'bs_fdbck'/'preprocess'/'subproc_station_output.py'
+    # file = package_base_path / 'bs_fdbck'/'preprocess'/'noresm'/'subproc_station_output.py'
     # while loop:
     # mod_load  ='module load NCO/4.7.9-nsc5 &&'
     notdone = True

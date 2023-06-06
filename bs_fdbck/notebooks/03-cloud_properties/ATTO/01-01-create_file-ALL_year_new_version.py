@@ -21,36 +21,28 @@
 # %autoreload 2
 
 
-import useful_scit.util.log as log
-import numpy as np
-from bs_fdbck.util.BSOA_datamanip import broadcast_vars_in_ds_sel, rn_dic_ec_earth_cloud
 from datetime import timedelta
-
-# %%
-
-import xarray as xr
+from timeit import default_timer as timer
 
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import useful_scit.util.log as log
+import xarray as xr
+from dask.diagnostics import ProgressBar
+
 from bs_fdbck.constants import path_extract_latlon_outdata
-
-from bs_fdbck.util.imports import import_fields_xr_echam
-
+# %%
+from bs_fdbck.constants import path_measurement_data
+from bs_fdbck.util.BSOA_datamanip import broadcast_vars_in_ds_sel, rn_dic_ec_earth_cloud
 from bs_fdbck.util.BSOA_datamanip import compute_total_tau, change_units_and_compute_vars, \
     get_dic_df_mod, change_units_and_compute_vars_echam, extract_2D_cloud_time_echam, rn_dic_echam_cloud, \
     rn_dic_noresm_cloud
-
 from bs_fdbck.util.BSOA_datamanip import fix_echam_time
-
-import pandas as pd
-
-from timeit import default_timer as timer
-
-from dask.diagnostics import ProgressBar
-
 from bs_fdbck.util.BSOA_datamanip.atto import season2month
+from bs_fdbck.util.imports import import_fields_xr_echam
 
 # %%
-from bs_fdbck.constants import path_measurement_data
 
 # %%
 xr.set_options(keep_attrs=True)
@@ -916,9 +908,6 @@ for seas in calc_seasons:
         df_mod.to_csv(_fn_csv)
 
 # %%
-df_mod['N
-
-# %%
 df_mod.plot.scatter(x='CWP', y='COT')
 
 # %%
@@ -1414,7 +1403,6 @@ input_path_ukesm = path_extract_latlon_outdata / model_name_ukesm / case_name_uk
 cases_ukesm = [case_name_ukesm]
 
 # %%
-from bs_fdbck.util.BSOA_datamanip.ukesm import fix_units_ukesm, extract_2D_cloud_time_ukesm
 
 # %% [markdown]
 # #### Station variables  and others
@@ -1613,7 +1601,6 @@ if True:#not fn_final_ukesm.exists():
 ds_all['lwp'].quantile(.95)
 
 # %%
-from bs_fdbck.util.BSOA_datamanip.ukesm import get_rndic_ukesm
 
 # %% tags=[]
 ds_all = xr.open_dataset(fn_final_ukesm)

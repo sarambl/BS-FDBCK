@@ -64,7 +64,7 @@ def launch_monthly_h1(case, issectional, max_launches=8, from_time='2008-01-01',
     l_df['status'] = l_df.apply(update_stat_proc, axis=1)
     check_stat_proc(l_df)
     pyf = sys.executable  # "/persistent01/miniconda3/envs/env_sec_v2/bin/python3"
-    file = package_base_path / 'bs_fdbck'/'preprocess'/'subproc_monthly_h1.py'
+    file = package_base_path / 'bs_fdbck'/'preprocess'/'noresm'/'subproc_monthly_h1.py'
     # while loop:
     notdone = True
     while notdone:

@@ -13,7 +13,7 @@
 # ---
 
 # %%
-from bs_fdbck.preprocess.launch_monthly_station_collocation_from_full_grid import launch_monthly_station_output
+from bs_fdbck.preprocess.launch_monthly_station_collocation_from_full_grid import launch_monthly_station_output_noresm
 from bs_fdbck.util.Nd.sizedist_class_v2.SizedistributionBins import SizedistributionStationBins
 from bs_fdbck.util.collocate.collocateLONLAToutput import CollocateLONLATout
 from bs_fdbck.data_info.variable_info import list_sized_vars_nonsec, list_sized_vars_noresm
@@ -86,11 +86,9 @@ log.ger.info(f'TIMES:****: {from_t} {to_t}')
 
 # %%
 for case_name in cases_sec:
-    continue
-    launch_monthly_station_output(case_name, True, from_time=from_t, to_time=to_t)
+    launch_monthly_station_output_noresm(case_name, True, from_time=from_t, to_time=to_t)
 for case_name in cases_orig:
-    continue
-    launch_monthly_station_output(case_name, False, from_time=from_t, to_time=to_t)
+    launch_monthly_station_output_noresm(case_name, False, from_time=from_t, to_time=to_t)
 # %% [markdown]
 # ## Merge monthly
 
