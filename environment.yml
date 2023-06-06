@@ -33,5 +33,6 @@ dependencies:
     - ebas-io
     - jupyter
     - nbresuse
+    - SciencePlots
 prefix: /persistent01/miniconda3/envs/env_sec_v2
 
