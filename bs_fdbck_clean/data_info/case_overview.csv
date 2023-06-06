@@ -1,0 +1,5 @@
+Cases:,Description:,compset,Type,nudged (0/1),setup(0/1),queued(0/1),done (0/1),Note,Nucleation scheme,start_time,end_time,nice_name,color,
+OsloAero_intBVOC_f19_f19_spinup,spinup,NFHISTnorpddmsbcsdyn,original,0,1,1,1,,paas,2007-01-01,2011-01-01,,,
+OsloAero_intBVOC_f19_f19,run,NFHISTnorpddmsbcsdyn,original,0,1,1,1,,paas,2011-01-01,2014-01-01,,,
+OsloAeroSec_intBVOC_f19_f19,run,NFHISTnorpddmsbcsdyn,sectional,0,1,1,1,,paas,2011-01-01,2014-01-01,,,
+NF1850_spinup,spinup,1850_CAM60%NORESM%NORBC,original,0,1,1,1,,paas,0001-01-01,0003-01-01,,,

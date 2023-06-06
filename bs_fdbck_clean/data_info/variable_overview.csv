@@ -1,0 +1,76 @@
+var_name,nice_name,nice_units
+N_AER,$N_a$,cm$^{-3}$
+CDOD550,clear sky AOD at 550nm,
+NDAF_Ghan,NDF$_{Ghan}$,W m$^{-2}$
+NDAF,NDAF,W m$^{-2}$
+CDNC_2D,CDNC,cm$^{-3}$
+AWNC,CDNC,cm$^{-3}$
+CDNC_2D_TG,CDNC,cm$^{-3}$
+NCFT_Ghan,NCRE$_{Ghan}$,W m$^{-2}$
+NCFS,NCFS,W m$^{-2}$
+NCFT,NCF,W m$^{-2}$
+Diff_ratio,R,
+SFisoprene,Surface em. isoprene,Tg year$^{-1}$
+SFmonoterp,Surface em. monoterpene,Tg year$^{-1}$
+condTend_SOA_total,SOA production,Tg year$^{-1}$
+TGCLDCWP,CWP,kg m$^{-2}$
+Av_size_num,D$_p$,nm
+Av_hygr_num,Number wheighted average hygroscopicity,
+CWP,CWP,g m$^{-2}$
+LWP,In-cloud LWP,g m$^{-2}$
+TGCLDLWP,LWP,kg m$^{-2}$
+TGCLDIWP,IWP,kg m$^{-2}$
+IWP,In-cloud IWP,g m$^{-2}$
+CLDTOT,CF,
+NFT,Net Forcing TOA,W m$^{-2}$
+REFF_2D,r$_e$,$\mu$m
+REFF_2D_TG,r$_e$,$\mu$m
+AREL,r$_e$,$\mu$m
+GPP,GPP,gC m$^{-2}$ s$^{-1}$
+cb_SOA_dry,SOA column burden,kg m$^{-2}$
+cb_isoprene,Isoprene column burden,kg m$^{-2}$
+cb_monoterp,Monoterpene column burden,kg m$^{-2}$
+cb_frac_SOA,SOA fraction,
+TBOT,Temperature,K
+tot_vis_rad,Total incoming radiation,
+SWCF,SWCF,Wm$^{-2}$
+LWCF,LWCF,Wm$^{-2}$
+NCONC01,N$_{NPF}$,cm$^{-3}$
+ACTNL_incld,CDNC(CT),cm$^{-3}$
+ACTREL_incld,"r$_{e}$(CT)",$\mu$m
+AWNC_incld,CDNC,cm$^{-3}$
+AREL_incld,"r$_{e}$",$\mu$m
+SOA_NA,SOA$_{NPF}$,
+SO4_NA,SO4$_{NPF}$,
+SWCF_Ghan,SWCRE$_{Ghan}$,W m$^{-2}$
+LWCF_Ghan,LWCRE$_{Ghan}$,W m$^{-2}$
+fSOA, SOA$_{NPF}$ frac,%
+nrSEC_tot,N$_{sec}$,cm$^{-3}$
+N_secmod,N$_{tot}$,cm$^{-3}$
+SOA_LV,SOAG$_{LV}$,
+H2SO4,H$_2$SO$_4$,
+NUCLRATE,J$_{nuc}$,cm$^{-3}$s$^{-1}$
+COAGNUCL,CoagS$_{nuc}$,
+NMR01,NMR$_{NPF}$,
+SOA_NA_totLossR,LR SOA$_{NPF}$
+SO4_NA_totLossR,LR SO4$_{NPF}$
+SO4_NA_lifetime,$\tau$(SO4$_{NPF}$)
+SOA_NA_lifetime,$\tau$(SOA$_{NPF}$)
+SWDIR_Ghan,SWDRE$_{Ghan}$,W m$^{-2}$
+LWDIR_Ghan,LWDRE$_{Ghan}$,W m$^{-2}$
+DIR_Ghan,DRE$_{Ghan}$,W m$^{-2}$
+cb_NA,Col. burden N$_{NPF}$,kg m$^{-2}$
+cb_SOA_NA,c.b. SOA$_{NPF}$,kg m$^{-2}$
+cb_SO4_NA,c.b. SO4$_{NPF}$,kg m$^{-2}$
+CDNUMC,col$_{droplets}$,m$^{-2}$
+Smax_w,S$_{max}$,%
+NACT1_4,"N$_{act,1,4}$",cm$^{-3}$
+NACT01,"N$_{act,1}$",cm$^{-3}$
+NACT04,"N$_{act,4}$",cm$^{-3}$
+NACT_FRAC01,"fN$_{act,1}$",frac
+NACT_FRAC04,"fN$_{act,4}$",frac
+N50,N$_{50}$,cm$^{-3}$
+N100,N$_{100}$,cm$^{-3}$
+N150,N$_{150}$,cm$^{-3}$
+N200,N$_{200}$,cm$^{-3}$
+N250,N$_{250}$,cm$^{-3}$

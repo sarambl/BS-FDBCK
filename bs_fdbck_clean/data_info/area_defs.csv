@@ -1,0 +1,15 @@
+area,max_lat,min_lat,max_lon,min_lon,color,nice_name
+Arctic,90.,60.,180.,-180.,#984ea3,Arctic
+landOnly,,,,,#a6761d,Continental
+notLand,,,,,#377eb8,Marine
+Global,,,,,#e41a1c,Global
+Antarctic,-60.,-90.,180.,-180.,#f781bf,Antarctic
+All Tropics,30.,-30.,180.,-180.,,All Tropics
+Polar N,90,66.5,180,-180,#984ea3,Polar N
+Polar S,-66.5,-90,180,-180,#f781bf,Polar S
+Pacific,30.,-30.,-120.,170.,#386cb0,Pacific
+Pacific S,-30.,-60.,-120.,170.,#386cb0,Pacific S
+Pacific N,60.,30.,-140.,170.,#386cb0,Pacific N
+Southern Ocean,-45,-60,180,-180,#386cb0,Southern Ocean
+Amazonas and surroundings,2.,-16.,-50.,-74.,#66a61e,Amazonas
+Boreal forest,70.,55.,180.,-180.,#1b9e77,Boreal forest

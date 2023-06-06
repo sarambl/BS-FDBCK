@@ -5,8 +5,8 @@ Analysis for BSOA paper:
 # Setup:
 ### Download:
 ```bash
-git clone git@github.com:sarambl/SECT_SENS.git 
-cd SECT_SENS/
+git clone git@github.com:sarambl/BS-FDBCK.git 
+cd BS-FDBCK/
 ```
 
 
@@ -29,19 +29,19 @@ pip install  ebas_io-3.6.1-py3-none-any.wh
 
 
 ## Edit settings and paths: 
-Edit paths at the top of [bs_fdbck/constants.py](bs_fdbck/constants.py). 
-
+Edit paths at the top of [bs_fdbck_clean/constants.py](bs_fdbck/constants.py).
 
 ##
 
 
 ## To reproduce results:
-### Create Nd datasets:
+### Preprocess model data:
 ```bash
-cd bs_fdbck/preprocess/
-python Nd.py
-
+cd bs_fdbck_clean/preprocess/
+chmod +x preprocess.sh
+./preprocess.sh
 ```
 
+
 ### Run notebooks:
-Run the notebooks in [bs_fdbck/notebooks](bs_fdbck/notebooks).
+Run the notebooks in [bs_fdbck_clean/notebooks](bs_fdbck_clean/notebooks) according to their ordering. 
