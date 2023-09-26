@@ -3,7 +3,7 @@
   <component name="Black">
     <option name="sdkName" value="bs_fdbck_tetralith1_env" />
   </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_16" project-jdk-name="bs_fdbck_tetralith1_env" project-jdk-type="Python SDK">
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_16" project-jdk-name="bs_fdbck_clean_tetralith2_env" project-jdk-type="Python SDK">
     <output url="file://$PROJECT_DIR$/out" />
   </component>
 </project>

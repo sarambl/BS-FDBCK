@@ -5,6 +5,7 @@ import pathlib
 
 ## Root:
 project_name = 'BS-FDBCK_clean'
+project_name_output = 'BS-FDBCK'
 
 tetralith_root = '/proj/bolinc/users/x_sarbl/'
 
@@ -50,7 +51,7 @@ path_plots = analysis_base_path / f'Plots_{project_name}'
 
 # Output data:
 
-path_outdata = analysis_base_path / f'Output_data_{project_name}'
+path_outdata = analysis_base_path / f'Output_data_{project_name_output}'
 
 path_eusaar_outdata = path_eusaar_data / 'EUSAAR_data/'
 

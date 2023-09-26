@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="On explicit save action" serverName="tetralish_archive" exclude=".svn;.cvs;.idea;.DS_Store;.git;.hg;*.hprof;*.pyc;.ipynb_checkpoints;" confirmBeforeDeletion="false" showEqualInSync="true">
+  <component name="PublishConfigData" autoUpload="Always" serverName="x_sarbl@tetralith2.nsc.liu.se:22 agent" exclude=".svn;.cvs;.idea;.DS_Store;.git;.hg;*.hprof;*.pyc;.ipynb_checkpoints;" confirmBeforeDeletion="false" showEqualInSync="true">
     <option name="confirmBeforeDeletion" value="false" />
     <serverData>
       <paths name="tetralish_archive">
@@ -30,7 +30,14 @@
           </mappings>
         </serverdata>
       </paths>
+      <paths name="x_sarbl@tetralith2.nsc.liu.se:22 agent">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/analysis/BS-FDBCK_clean" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
     </serverData>
-    <option name="myAutoUpload" value="ON_EXPLICIT_SAVE" />
+    <option name="myAutoUpload" value="ALWAYS" />
   </component>
 </project>
