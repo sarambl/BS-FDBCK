@@ -14,10 +14,9 @@ import xarray as xr
 from bs_fdbck_clean.util.practical_functions import make_folders
 from dask.diagnostics import ProgressBar
 
-
 import warnings
-warnings.filterwarnings(action='ignore',category=FutureWarning,module='xarray' )
 
+warnings.filterwarnings(action='ignore', category=FutureWarning, module='xarray')
 
 
 class Collocate:
@@ -161,6 +160,7 @@ class CollocateModel(Collocate):
     def savepath_coll_ds(self, var_name):
         # print(self.space_resolution)
         sp = str(self.savepath_root)
+        print(self.model_name)
         st = '/%s/%s/%s/%s_%s' % (sp, self.model_name, self.case_name,
                                   var_name, self.case_name)
         st = st + '_%s_%s' % (self.from_time, self.to_time)
@@ -197,10 +197,6 @@ class CollocateModel(Collocate):
         # ds.close()
         return ds
 
-
-
-
-
     def check_if_load_raw_necessary(self, varlist):
         print('got to check_if_load_raw_necessary')
         for var in varlist:
@@ -217,9 +213,9 @@ class CollocateModel(Collocate):
         time2 = time.time()
         print('TIME TO LOAD RAW DATASET IN collocate.py : %s s' % (time2 - time1))
         # get unique variables in code:
-        #collocate_dataset_allvars()
+        # collocate_dataset_allvars()
 
-        #ds_col = collocate_dataset_allvars(ds,  model_name=self.model_name,locations=self.locations)
+        # ds_col = collocate_dataset_allvars(ds,  model_name=self.model_name,locations=self.locations)
         vrs = list(set(ds.data_vars).intersection(set(varlist)))
         for var in vrs:
             print(var)
@@ -238,7 +234,7 @@ class CollocateModel(Collocate):
                 ds = self.load_raw_ds(None)  # chunks={'lev':2})
             print('making other dataset')
             print(self.locations)
-            da = collocate_dataset(var, ds, model_name=self.model_name,locations=self.locations)
+            da = collocate_dataset(var, ds, model_name=self.model_name, locations=self.locations)
             ds = da.to_dataset()
             print(fn)
             delayed_obj = ds.to_netcdf(fn, compute=False)  # , chunks={'diameter':1})
@@ -330,7 +326,7 @@ def collocate_dataset(var_name, ds, locations=None, model_name='NorESM'):
         lat = locations[loc]['lat']
         lon = locations[loc]['lon']
 
-        if lon>180 and da['lon'].max()<=180:
+        if lon > 180 and da['lon'].max() <= 180:
             print(f'location lon: {lon}. NEEDS TO CONVERT LON to -180,180')
             lon = (lon + 180) % 360 - 180
 
@@ -365,16 +361,16 @@ def collocate_dataset_allvars(ds, locations=None, model_name='NorESM'):
         lat = locations[loc]['lat']
         lon = locations[loc]['lon']
 
-        if lon>180 and ds['lon'].max()<=180:
+        if lon > 180 and ds['lon'].max() <= 180:
             print(f'location lon: {lon}. NEEDS TO CONVERT LON to -180,180')
             lon = (lon + 180) % 360 - 180
-        ds_sel = ds.sel(lat=lat, lon=lon, method='nearest',drop=True )#.drop(['lat','lon'])
-        #ds_sel = ds_sel.assign_coords(location = [loc])
+        ds_sel = ds.sel(lat=lat, lon=lon, method='nearest', drop=True)  # .drop(['lat','lon'])
+        # ds_sel = ds_sel.assign_coords(location = [loc])
         ds_sel = ds_sel.expand_dims('location')
         ds_sel['location'] = [loc]
-        #ds_sel = ds_sel.assign_coords(location = [loc])
+        # ds_sel = ds_sel.assign_coords(location = [loc])
         list_locations.append(ds_sel)
-    #da_out = ds_tmp.to_array(dim='location', name=var_name)
+    # da_out = ds_tmp.to_array(dim='location', name=var_name)
 
     ds_out = xr.merge(list_locations)
     for at in ds.attrs:
