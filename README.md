@@ -7,6 +7,8 @@ Analysis for BSOA paper:
 ```bash
 git clone git@github.com:sarambl/BS-FDBCK.git 
 cd BS-FDBCK/
+git checkout ukesm_bs_fdbck
+git pull origin ukesm_bs_fdbck
 ```
 
 
@@ -44,4 +46,4 @@ chmod +x preprocess.sh
 
 
 ### Run notebooks:
-Run the notebooks in [bs_fdbck_clean/notebooks](bs_fdbck_clean/notebooks) according to their ordering. 
+Run the notebooks in [bs_fdbck_clean/notebooks](ukesm_bs_fdbck/notebooks) according to their ordering. 
