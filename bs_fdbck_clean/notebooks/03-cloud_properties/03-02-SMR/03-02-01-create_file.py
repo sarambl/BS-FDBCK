@@ -341,6 +341,19 @@ ds_all = xr.open_dataset(fn_comb_lev1_final, chunks={'lon': 1}, engine='netcdf4'
 ds_all['time'].attrs['timezone'] = 'utc'
 ds_all['NCONC01'].isel(lat=1, lon=1).plot()
 
+# %% [markdown] tags=[]
+# #### NorESM Shift time step to start of period to be consistent with measurements and other models
+
+# %%
+#ind = df.index
+#df.index = ind - datetime.timedelta(hours=1)
+if ds_all['time'].attrs['timezone'] == 'utc':
+    ds_all['time'] = ds_all['time'].to_pandas().index - timedelta(hours=1)
+    ds_all['time'].attrs['timezone'] = 'utc'
+    #ds_all['time'].attrs['timezone'] = 'utc+2'
+    print('shifted time by -1 for NorESM')
+
+
 # %% [markdown]
 # #### Shift timezone
 
@@ -352,7 +365,7 @@ with ProgressBar():
 if ds_all['time'].attrs['timezone'] == 'utc':
     ds_all['time'] = ds_all['time'].to_pandas().index + timedelta(hours=2)
     ds_all['time'].attrs['timezone'] = 'utc+2'
-    print('shifted time by -4')
+    print('shifted time by -2')
     # dic_ds[k] = _ds
 
 # %% [markdown] tags=[]
@@ -410,6 +423,11 @@ ds_all
 #ds_all['T_C'].resample(time='hour').mean().plot()
 ds_all['T_C'].sel(lat=lat_station, lon=lon_station, method='nearest').groupby(ds_all['time.hour']).mean().plot(c='b')
 ds_comb_station['T_C'].groupby(ds_comb_station['time.hour']).mean().plot(linestyle=':', c='r', linewidth=5)
+
+# %%
+
+ds_all['T_C'].sel(time=slice('2013-06','2013-08')).sel(lat=lat_station, lon=lon_station, method='nearest').plot(label='full dataset',linewidth=0, marker='.', markersize=5)
+ds_comb_station['T_C'].sel(time=slice('2013-06','2013-08')).plot(label='station dataset',linewidth=0,  marker='.', markersize=5, alpha=.2)
 
 # %%
 varl_tmp = varl_st + varl_st_computed
@@ -833,7 +851,7 @@ with ProgressBar():
 if ds_all['time'].attrs['timezone'] == 'utc':
     ds_all['time'] = ds_all['time'].to_pandas().index + timedelta(hours=2)
     ds_all['time'].attrs['timezone'] = 'utc+2'
-    print('shifted time by 2')
+    print('shifted time by +2')
     # dic_ds[k] = _ds
 
 # %% [markdown] tags=[]
@@ -851,13 +869,18 @@ ds_comb_station = ds_comb_station.assign_coords(station=[select_station])
 
 # %%
 ds_all['hour'] = ds_all['time.hour']
-ds_all['T_C'].groupby(ds_all['hour']).mean().sel(lat=lat_station, lon=lon_station, method='nearest').plot()
-ds_comb_station['T_C'].groupby(ds_comb_station['time.hour']).mean().plot()
+ds_all['T_C'].groupby(ds_all['hour']).mean().sel(lat=lat_station, lon=lon_station, method='nearest').plot(label='full dataset')
+ds_comb_station['T_C'].groupby(ds_comb_station['time.hour']).mean().plot(label='station dataset')
 
 # %%
 ds_all['hour'] = ds_all['time.hour']
 ds_all['T_C'].groupby(ds_all['hour']).mean().sel(lat=lat_station, lon=lon_station, method='nearest').plot()
 ds_comb_station['T_C'].groupby(ds_comb_station['time.hour']).mean().plot()
+
+# %%
+
+ds_all['T_C'].sel(time=slice('2013-06','2013-08')).sel(lat=lat_station, lon=lon_station, method='nearest').plot(label='full dataset',linewidth=0, marker='.', markersize=5)
+ds_comb_station['T_C'].sel(time=slice('2013-06','2013-08')).plot(label='station dataset',linewidth=0,  marker='.', markersize=5, alpha=.2)
 
 # %%
 
@@ -1702,6 +1725,18 @@ ds_all['lwp_incld'].where(ds_all['weight_of_cdnc_top_cloud']>0.1).plot.hist(bins
 # %%
 ds_all = ds_all.where(ds_all['weight_Reff_2d_distrib']>0.1)
 
+# %% [markdown]
+# #### UKESM Shift time step to start of period to be consistent with measurements and other models
+
+# %%
+if ds_all['time'].attrs['timezone'] == 'utc':
+    ds_all['time'] = ds_all['time'].to_pandas().index - timedelta(hours=1)
+    #ds_all['time'].attrs['timezone'] = 'utc+2'
+    ds_all['time'].attrs['timezone'] = 'utc'
+    
+    print('shifted time by -1 for UKESM')
+
+
 # %% [markdown] tags=[]
 # #### Shift timezone
 
@@ -1713,7 +1748,7 @@ with ProgressBar():
 if ds_all['time'].attrs['timezone'] == 'utc':
     ds_all['time'] = ds_all['time'].to_pandas().index + timedelta(hours=2)
     ds_all['time'].attrs['timezone'] = 'utc+2'
-    print('shifted time by 24')
+    print('shifted time by +2')
     # dic_ds[k] = _ds
 
 # %% [markdown] tags=[]
@@ -1835,15 +1870,3 @@ dic_ds['AEROCOMTRAJ']['CWP'].quantile(.95)
 
 # %%
 _ds
-
-# %%
-
-# %%
-
-# %%
-
-# %%
-
-# %%
-
-# %%

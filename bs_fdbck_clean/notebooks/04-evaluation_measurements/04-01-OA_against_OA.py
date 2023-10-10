@@ -42,7 +42,7 @@ from bs_fdbck_clean.util.plot.BSOA_plots import cdic_model
 from bs_fdbck_clean.constants import path_measurement_data
 select_station = 'SMR'
 postproc_data = path_measurement_data /'model_station'/select_station
-postproc_data_obs = path_measurement_data /select_station/'processed'
+postproc_data_obs = path_measurement_data /'SMEARII'/'processed'
 
 
 # %%
@@ -330,6 +330,50 @@ df_anom_OAG = df_anom_OAG[df_anom_OAG.index.month.isin(months)]
 # %%
 df_OA_all
 
+# %%
+import datetime
+
+# %%
+for m in models + ['Observations']:
+    c = list(dic_df_pre[m].keys())[0]
+    _df = dic_df_pre[m][c].copy(deep=True)
+    #if m in ['NorESM','UKESM']:
+    #    _df.index = _df.index -  datetime.timedelta(hours=1)
+    #if m in ['ECHAM-SALSA','EC-Earth']:
+    #    _df.index = _df.index -  datetime.timedelta(hours=0)
+
+    print(m)
+    if m=='Observations':
+        a =_df.groupby(_df.index.hour).mean()['HYY_META.T168']
+    else:
+        a = _df.groupby(_df.index.hour).mean()['T_C'].dropna(axis=0)#.plot(marker='*',label=m)         
+    ((a-a.mean())/(a.max()-a.min())).plot(label=m)         
+    
+plt.legend()
+#plt.xlim(['2014-07','2014-08'])
+
+# %% [markdown]
+# ### Controle that EC-Earth has correct time zone also for TM5 by checking that diurnal cycle of isoprene emissions and temperature align
+
+# %%
+m = 'EC-Earth'
+
+# %%
+c = list(dic_df_pre[m].keys())[0]
+_df = dic_df_pre[m][c]
+print(m)
+f, ax = plt.subplots()
+_df.groupby(_df.index.hour).mean()['T_C'].dropna(axis=0).plot(marker='*',label='temperature', c='r')      
+ax.legend(bbox_to_anchor=(1.1,.5,))
+ax2 = ax.twinx()
+_df.groupby(_df.index.hour).mean()['emiisop'].dropna(axis=0).plot(marker='*',label='emissions isoprene', ax=ax2)         
+    
+ax2.legend(bbox_to_anchor=(1,1.1,))
+ax2.legend(bbox_to_anchor=(1.5,.8,))
+
+ax.set_xticks(np.arange(24))
+ax.grid()
+
 # %% [markdown]
 # ## Timeseries
 
@@ -406,7 +450,7 @@ for mod in df_anom_OA.columns:
         c = 'k'
     else:
         c=cdic_model[mod]
-    if mod in ['UKESM','EC-Earth']:
+    if mod in ['UKESM']:
         # 3h resolution so need to drop nans
         _df_anom_OA = _df_anom_OA[_df_anom_OA[mod].notna()]
     ls = linestyle_dic[mod]
@@ -457,7 +501,7 @@ for seas, ax in zip(seasons2months, axs):
         else:
             c=cdic_model[mod]
             #continue
-        if mod in ['UKESM','EC-Earth']:
+        if mod in ['UKESM']:
             # 3h resolution so need to drop nans
             _df_anom_OA = _df_anom_OA[_df_anom_OA[mod].notna()]
 
@@ -516,7 +560,7 @@ for seas, ax in zip(seasons2months, axs):
         else:
             c=cdic_model[mod]
             #continue
-        if mod in ['UKESM','EC-Earth']:
+        if mod in ['UKESM']:
             # 3h resolution so need to drop nans
             _df_OA_all = _df_OA_all[_df_OA_all[mod].notna()]
 
@@ -613,7 +657,7 @@ fig, axs = plt.subplots(2,2,figsize = [9,5,],sharex=True, sharey=True)
 
 for seas,ax in zip(seasons2months, axs.flatten()):
     df_OA_all_sub =  df_OA_all.copy()[df_OA_all['Obs'].notna()]
-    for mo in ['UKESM','EC-Earth']:
+    for mo in ['UKESM']:
         if mo in df_OA_all.columns:
             df_OA_all_sub[mo] =df_OA_all_sub.loc[:,mo].ffill(limit=3).copy()
             df_OA_all_sub[mo] =df_OA_all_sub[mo][df_OA_all_sub['Obs'].notna()]
@@ -683,7 +727,7 @@ fig, ax = plt.subplots(1,figsize = [6,4,],)
 seas ='JA'
 
 df_OA_all_sub = df_OA_all.copy()
-for mo in ['EC-Earth','UKESM']:
+for mo in ['UKESM']:
     if mo in df_OA_all.columns:
         #mo = 'UKESM'
         df_OA_all_sub[mo] =df_OA_all_sub.loc[:,mo].ffill(limit=3).copy()
@@ -777,7 +821,7 @@ fig, axs = plt.subplots(4,figsize = [4,8,],sharex=True, sharey=True)
 
 for seas,ax in zip(seasons2months, axs.flatten()):
     df_OA_all_sub = df_OA_all.copy()
-    for mo in ['UKESM','EC-Earth']:
+    for mo in ['UKESM']:
         if mo in df_OA_all.columns:
         
             df_OA_all_sub[mo] =df_OA_all_sub.loc[:,mo].ffill(limit=3).copy()
@@ -829,7 +873,7 @@ plt.savefig(fn.with_suffix('.pdf'), dpi=300)
 
 # %%
 df_OA_all_sub = df_OA_all.copy()
-for mo in ['UKESM','EC-Earth']:
+for mo in ['UKESM']:
     if mo in df_OA_all.columns:
         df_OA_all_sub[mo] =df_OA_all_sub.loc[:,mo].ffill(limit=3).copy()
         df_OA_all_sub[mo] =df_OA_all_sub[mo][df_OA_all_sub['Obs'].notna()]
@@ -928,6 +972,8 @@ for seas,i in zip(['DJF','MAM','JJA','SON'], range(4)):
                      cbar=True, cbar_kws=dict(shrink=.75),
                 
                 edgecolors=None,
+             rasterized=True,
+                     
                      bins=(bins,bins,),
                 data = _df)
 
@@ -967,6 +1013,7 @@ for mo, ax in zip(models,axs):
                      cbar=True, cbar_kws=dict(shrink=.75),
                 
                 edgecolors=None,
+             rasterized=True,
                  
                 data = _df)
 
@@ -996,10 +1043,10 @@ fig.savefig(fn.with_suffix('.pdf'), dpi=300)
 # %%
 fig, axs = plt.subplots(4,sharey=True, figsize=[10,8])
 ax = axs[0]
-_df = df_OA_incDiff
+_df = df_anom_OA
 _df['hour'] = _df.index.hour
 for mo, ax in zip(models,axs.flatten()):
-    sns.histplot(y=f'{mo}_diff', x=f'hour',#orbins=bins_, alpha=0.5, 
+    sns.histplot(y=f'{mo}', x=f'hour',#orbins=bins_, alpha=0.5, 
                                      #hue=f'Obs', 
                 #col = 'dir',
                 ax=ax,
@@ -1024,7 +1071,55 @@ for mo, ax in zip(models,axs.flatten()):
     #ax.plot(lims,lims,'k', linewidth=.5)
 
     #_df.groupby('hour').count().plot(ax = ax.twinx())
+
+ax.set_ylim([-1.5,1.5])
+fn = make_fn_eval('_'.join(models),'2dhist_dist_time')
+fig.savefig(fn, dpi=300)
+fig.savefig(fn.with_suffix('.pdf'), dpi=300)
+
+# %%
+df_OA_diffObs = (df_OA_all.drop('Obs', axis=1).T-df_OA_all['Obs']).T
+
+# %%
+df_OA_diffObs
+
+# %%
+df_OA_diffObs.tail(50)
+
+# %%
+fig, axs = plt.subplots(4,sharex=False, figsize=[10,8])
+ax = axs[0]
+_df = df_OA_diffObs
+_df['hour'] = _df.index.hour
+for mo, ax in zip(models,axs.flatten()):
     
+    sns.histplot(y=f'{mo}', x='hour',#orbins=bins_, alpha=0.5, 
+                                     #hue=f'Obs', 
+                #col = 'dir',
+                ax=ax,
+                #alpha=0.4,
+                cmap='YlGnBu',
+                 
+                
+                #edgecolors=None,
+                data = _df[[mo,'hour']].dropna(axis=0))
+
+    #ax.set_yscale('log')
+    # ax.set_xscale('symlog')
+    #ax.set_ylim([-3.5,3.5])
+    #ax.set_ylim([0.1,30])
+
+    #ax.set_xlabel(f'{mo} OA '+'[$\mu$gm$^{-3}$]')
+    #ax.set_ylabel('Observed OA [$\mu$gm$^{-3}$]')
+
+
+
+    #lims = ax.get_xlim()
+    #ax.plot(lims,lims,'k', linewidth=.5)
+
+    #_df.groupby('hour').count().plot(ax = ax.twinx())
+
+    ax.set_ylim([-1.5,1.5])
 fn = make_fn_eval('_'.join(models),'2dhist_dist_time')
 fig.savefig(fn, dpi=300)
 fig.savefig(fn.with_suffix('.pdf'), dpi=300)

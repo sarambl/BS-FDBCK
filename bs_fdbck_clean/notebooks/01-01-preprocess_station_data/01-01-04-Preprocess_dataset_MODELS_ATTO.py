@@ -37,12 +37,12 @@ except:
 # %%
 from pathlib import Path
 
-from bs_fdbck.util.BSOA_datamanip import ds2df_inc_preprocessing
-from bs_fdbck.util.collocate.collocateLONLAToutput import CollocateLONLATout
-from bs_fdbck.util.collocate.collocate_echam_salsa import CollocateModelEcham
+from bs_fdbck_clean.util.BSOA_datamanip import ds2df_inc_preprocessing
+from bs_fdbck_clean.util.collocate.collocateLONLAToutput import CollocateLONLATout
+from bs_fdbck_clean.util.collocate.collocate_echam_salsa import CollocateModelEcham
 import useful_scit.util.log as log
 
-from bs_fdbck.util.plot.BSOA_plots import make_cool_grid, plot_scatter
+from bs_fdbck_clean.util.plot.BSOA_plots import make_cool_grid, plot_scatter
 
 import time
 import xarray as xr
@@ -60,7 +60,7 @@ import numpy as np
 from sklearn.linear_model import LinearRegression, BayesianRidge
 
 # %%
-from bs_fdbck.constants import path_measurement_data
+from bs_fdbck_clean.constants import path_measurement_data
 import matplotlib.pyplot as plt
 
 # %%
@@ -80,7 +80,7 @@ import datetime
 # ## Read in model data. 
 
 # %%
-model_lev_i=-1
+model_lev_i=-2
 select_station = 'ATTO'
 
 # %% [markdown]
@@ -301,9 +301,11 @@ varl =[
     'loadsoa',
     'emiterp',
     'emiisop',
+    
 ]
 varl_ifs=[
     'var130',
+    'var176',
 
 ]
 
@@ -388,7 +390,6 @@ di_mod2cases[model_name]=cases_ukesm
 # %%
 varl = [
     'Mass_Conc_OM_NS',
-
     'Mass_Conc_OM_KS',
     'Mass_Conc_OM_KI',
     'Mass_Conc_OM_AS',
@@ -409,6 +410,9 @@ varl = [
     'ddryAS',
     'ddryCS',
     'Temp',
+    'SFisoprene',
+    'SFterpene',
+
 ]
 
 
@@ -575,6 +579,9 @@ varl =['N100','DOD500','DOD440','ACTREL',#,'SOA_A1',
        'NMR14',
        'SIGMA14',
        #'hyam','hybm',
+       'FSNS','FSDS_DRF',
+       'FSNSC',
+       'FSDSCDRF',
        #'hyai','hybi',
        'N500',
       'SOA_NA','SOA_A1','OM_NI','OM_AI','OM_AC','SO4_NA','SO4_A1','SO4_A2','SO4_AC','SO4_PR',
@@ -736,7 +743,7 @@ rn_dict_echam={
 }
 
 # %%
-from bs_fdbck.util.BSOA_datamanip import calculate_daily_median_summer,calculate_summer_median, mask4summer,ds2df_echam
+from bs_fdbck_clean.util.BSOA_datamanip import calculate_daily_median_summer,calculate_summer_median, mask4summer,ds2df_echam
 
 # %%
 
@@ -770,7 +777,7 @@ dic_mod_ca['ECHAM-SALSA'][case_name_echam]
 # ### Run ds2df_echam
 
 # %%
-from bs_fdbck.util.BSOA_datamanip import pressure_default, standard_air_density,R
+from bs_fdbck_clean.util.BSOA_datamanip import pressure_default, standard_air_density,R
 
 df, df_sm = ds2df_echam(dic_mod_ca['ECHAM-SALSA'][case_name_echam], 
                         take_daily_median=False, 
@@ -849,16 +856,43 @@ df
 # \end{align}
 
 # %%
-from bs_fdbck.util.BSOA_datamanip import pressure_default, standard_air_density,R
+from bs_fdbck_clean.util.BSOA_datamanip import pressure_default, standard_air_density,R
 
 # %%
 df['T_C']
 
 # %%
-df['density'] = 1e5/(R*(df['T_C']+273.15))
+df['T_K'] = df['T_C'] + 273.15
+
+# %%
+df_cp = df[['T_K','N50','OA']]
+
+df_cp = df_cp.assign(hour=  df_cp.index.hour)
+
+fig, ax = plt.subplots()
+df_cp['OA'].groupby(df_cp['hour']).mean().plot(marker='o')
+df_cp['T_K'].groupby(df_cp['hour']).mean().plot(marker='o', ax=ax.twinx(), c='r')
+df_cp['T_K'].interpolate(method='quadratic').groupby(df_cp['hour']).mean().plot(marker='o', ax=ax.twinx(), c='m')
+
+df_cp['T_K'].interpolate(method='linear').groupby(df_cp['hour']).mean().plot(marker='o', ax=ax.twinx(), c='y')
+
+# %% [markdown]
+# ## Interpolate temperature quadratically before calculating density. 
+
+# %%
+df['T_K_interp'] = df['T_K'].interpolate(method='quadratic', limit=2)
+
+# %%
+df['density'] = 1e5/(R*df['T_K_interp'])
+df['density_no_interp'] = 1e5/(R*df['T_K'])
 
 # %%
 df['density'].plot(marker='.')
+df['density_no_interp'].plot(marker='.')
+
+# %%
+df['density'].groupby(df.index.hour).mean().plot(marker='.')
+df['density_no_interp'].groupby(df.index.hour).mean().plot(marker='.')
 
 # %%
 df['ambient2stp_correction_factor'] = (1/df['density'])*standard_air_density
@@ -903,6 +937,55 @@ ds_ukesm = dic_mod_ca['UKESM'][case_name_ukesm]
 # %%
 from bs_fdbck_clean.util.BSOA_datamanip.ukesm import diam_vars, num_vars
 
+# %% [markdown]
+# #### Time step difference in UKESM
+
+# %% [markdown]
+# f1 = '/proj/bolinc/users/x_sarbl/other_data/BS-FDBCK/UKESM/aerocom3_UKESM_GlobalTraj-CE_Terpene_Surf_Emiss_ModelLevel_201806_3hourly_u-cr294.nc'
+# f2 = '/proj/bolinc/users/x_sarbl/other_data/BS-FDBCK/UKESM/aerocom3_UKESM_GlobalTraj-CE_ddrymodeNS_ModelLevel_201806_3hourly_u-cr294.nc'
+#
+# ds_u1 = xr.open_dataset(f1)
+# ds_u2 = xr.open_dataset(f2)
+#
+#
+# print('terpene emissions')
+# display(ds_u1)
+# print('terpene emissions')
+#
+# display(ds_u2)
+#
+
+# %% [markdown]
+# #### Adjust the emissions to be at the same timestep
+# The emission dataset is labelled at the beginning of each time period, the rest is in the middle. We therefore need to adjust it to fit the rest of the data. 
+
+# %%
+ukesm_sf_vars = ['SFisoprene','SFterpene']
+ds_ukesm_sf = ds_ukesm[ukesm_sf_vars].dropna(dim='time').sel(time=slice('2012-01','2018-12'))
+ds_ukesm_sf['time'].attrs['timestamp'] = 'mid'
+
+# %%
+if ds_ukesm_sf['time'].attrs['timestamp'] =='mid':
+    ds_ukesm_sf['time'] = pd.to_datetime(ds_ukesm_sf['time'].values) - datetime.timedelta(hours=1.5)
+    ds_ukesm_sf['time'].attrs['timestamp'] = 'start'
+
+# %%
+ds_ukesm_sf
+
+# %%
+ds_ukesm_dropsf = ds_ukesm.drop(ukesm_sf_vars).dropna(dim='time', )
+ds_ukesm_dropsf
+
+# %% [markdown]
+# ##### Merge again
+
+# %%
+ds_ukesm = xr.merge([ds_ukesm_dropsf,ds_ukesm_sf])
+ds_ukesm
+
+# %% [markdown]
+# #### Plot 
+
 # %%
 for n in num_vars:
     ds_ukesm[n].plot()
@@ -946,7 +1029,7 @@ df
 # \end{align}
 
 # %%
-from bs_fdbck.util.BSOA_datamanip import pressure_default, standard_air_density,R
+from bs_fdbck_clean.util.BSOA_datamanip import pressure_default, standard_air_density,R
 
 # %%
 df['T_C']
@@ -977,6 +1060,13 @@ df['N50_STP'].plot()#.columns#['Temperature'].plot()
 # %%
 df['N50_amb'].plot.hist(bins=100, alpha=.5)#.columns#['Temperature'].plot()
 df['N50_STP'].plot.hist(bins=100, alpha=.5)#.columns#['Temperature'].plot()
+
+# %% [markdown]
+# ### UKESM Shift time step to start of period to be consistent with measurements and other models
+
+# %%
+ind = df.index
+df.index = ind - datetime.timedelta(hours=1)
 
 # %% [markdown]
 # ### Save result
@@ -1046,9 +1136,6 @@ dic_df_mod_case['NorESM'] = dic_df.copy()
 # \end{align}
 
 # %%
-from bs_fdbck.util.BSOA_datamanip import pressure_default, standard_air_density,R
-
-# %%
 df = dic_df_mod_case['NorESM'][case_noresm]
 
 # %%
@@ -1091,8 +1178,15 @@ dic_df['OsloAero_intBVOC_f09_f09_mg17_fssp']#['50-500'].plot()
 # %%
 dic_df['OsloAero_intBVOC_f09_f09_mg17_fssp']['N50'].plot()
 
+# %% [markdown]
+# ### NorESM Shift time step to start of period to be consistent with measurements and other models
+
+# %%
+ind = df.index
+df.index = ind - datetime.timedelta(hours=1)
+
 # %% [markdown] tags=[]
-# ## SHIFT TIME to ATTO which is  european winter time EET UTC-4
+# ## ALL MODELS: SHIFT TIME to ATTO which is  european winter time EET UTC-4
 
 # %%
 import datetime
@@ -1156,10 +1250,9 @@ for mod in models:
     dic_df_mod_case[mod]
     for ca in dic_df_mod_case[mod].keys():
         print(mod, ca)
-        if model_lev_i !=-2:
-            fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}_ilev{model_lev_i}.csv'
-        else:
-            fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}.csv'
+        fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}_ilev{model_lev_i}.csv'
+        #else:
+        #    fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}.csv'
         print(fn_out)
         dic_df_mod_case[mod][ca].to_csv(fn_out)
 

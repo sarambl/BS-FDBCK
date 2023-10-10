@@ -44,7 +44,7 @@ from bs_fdbck_clean.util.plot.BSOA_plots import cdic_model
 from bs_fdbck_clean.constants import path_measurement_data
 select_station = 'SMR'
 postproc_data = path_measurement_data /'model_station'/select_station
-postproc_data_obs = path_measurement_data /select_station/'processed'
+postproc_data_obs = path_measurement_data /'SMEARII'/'processed'
 
 
 # %%
@@ -248,6 +248,50 @@ linestyle_dic = {
     'EC-Earth':'-.',
 }
 
+
+# %%
+import datetime
+
+# %%
+for m in models + ['Observations']:
+    c = list(dic_df_pre[m].keys())[0]
+    _df = dic_df_pre[m][c].copy(deep=True)
+    #if m in ['NorESM','UKESM']:
+    #    _df.index = _df.index -  datetime.timedelta(hours=1)
+    #if m in ['ECHAM-SALSA','EC-Earth']:
+    #    _df.index = _df.index -  datetime.timedelta(hours=0)
+
+    print(m)
+    if m=='Observations':
+        a =_df.groupby(_df.index.hour).mean()['HYY_META.T168']
+    else:
+        a = _df.groupby(_df.index.hour).mean()['T_C'].dropna(axis=0)#.plot(marker='*',label=m)         
+    ((a-a.mean())/(a.max()-a.min())).plot(label=m)         
+    
+plt.legend()
+#plt.xlim(['2014-07','2014-08'])
+
+# %% [markdown]
+# ### Controle that EC-Earth has correct time zone also for TM5 by checking that diurnal cycle of isoprene emissions and temperature align
+
+# %%
+m = 'EC-Earth'
+
+# %%
+c = list(dic_df_pre[m].keys())[0]
+_df = dic_df_pre[m][c]
+print(m)
+f, ax = plt.subplots()
+_df.groupby(_df.index.hour).mean()['T_C'].dropna(axis=0).plot(marker='*',label='temperature', c='r')      
+ax.legend(bbox_to_anchor=(1.1,.5,))
+ax2 = ax.twinx()
+_df.groupby(_df.index.hour).mean()['emiisop'].dropna(axis=0).plot(marker='*',label='emissions isoprene', ax=ax2)         
+    
+ax2.legend(bbox_to_anchor=(1,1.1,))
+ax2.legend(bbox_to_anchor=(1.5,.8,))
+
+ax.set_xticks(np.arange(24))
+ax.grid()
 
 # %% [markdown]
 # ## Timeseries
@@ -1254,6 +1298,7 @@ sns.despine(fig)
 fig.tight_layout()
 fig.savefig(fn, dpi=300)
 fig.savefig(fn.with_suffix('.pdf'), dpi=300)
+print(fn)
 
 # %%
 fig, axs = plt.subplots(1,5,figsize = [12,4],sharex=True, sharey=True, dpi=200)
@@ -1265,6 +1310,160 @@ for i, mo in enumerate(dic_df_mod_case.keys()):
     #v = 'N100'
     _df_mod = dic_df_mod_case[mo][mod2cases[mo][0]].copy()
     _df = _df_mod[_df_mod.index.month.isin(season2month[seas])].copy()
+    #_df['hour'] = _df.index.hour
+    ax = axs[i]
+    bins = np.linspace(1,4,40)
+
+    #for mo, ax in zip(models,axs_sub):
+    sns.histplot(y=vy, x=vx,#orbins=bins_, alpha=0.5, 
+                                    # hue='hour', 
+                #col = 'dir',
+                ax=ax,
+                cmap = sns.color_palette("mako_r", as_cmap=True),
+                log_scale=(True, True),
+                     cbar=True, cbar_kws=dict(shrink=.75),
+                
+                edgecolors=None,
+                     bins=(bins,bins,),
+                 
+                data = _df)
+
+
+    ax.set_yscale('log')
+    ax.set_xscale('log')
+    ax.set_ylim([3e1,1e4])
+    ax.set_xlim([3e1,1e4])
+    ax.set_xscale('log')
+    ax.set_ylabel(f'{vy} '+'[cm$^{-3}$]')
+    ax.set_xlabel(f'{vx} '+'[cm$^{-3}$]')
+    ax.set_title(mo)
+
+    lims = ax.get_xlim()
+    ax.plot(lims,lims,'k', linewidth=.5)
+#fig.suptitle(f'Distribution at {select_station} in July & August')
+    
+
+fn = make_fn_eval('_'.join(models),f'2dist_Nx_conc_{vx}_against_{vy}')
+sns.despine(fig)
+fig.tight_layout()
+fig.savefig(fn, dpi=150)
+fig.savefig(fn.with_suffix('.pdf'),)
+
+# %%
+
+# %%
+fig, axs = plt.subplots(1,5,figsize = [12,4],sharex=True, sharey=True, dpi=200)
+seas = 'JA'
+vy = 'N100'
+vx = 'N50-100'
+for i, mo in enumerate(dic_df_mod_case.keys()):
+    
+    #v = 'N100'
+    _df_mod = dic_df_mod_case[mo][mod2cases[mo][0]].copy()
+    _df = _df_mod[_df_mod.index.month.isin(season2month[seas])].copy()
+    _df_shifted = _df.copy()
+    _df_shifted.index = _df.index - datetime.timedelta(hours=0)
+    
+    _df['N50-100'] = _df_shifted['N50'] - _df_shifted['N100']
+    #_df['hour'] = _df.index.hour
+    ax = axs[i]
+    bins = np.linspace(1,4,40)
+
+    #for mo, ax in zip(models,axs_sub):
+    sns.histplot(y=vy, x=vx,#orbins=bins_, alpha=0.5, 
+                                    # hue='hour', 
+                #col = 'dir',
+                ax=ax,
+                cmap = sns.color_palette("mako_r", as_cmap=True),
+                log_scale=(True, True),
+                     cbar=True, cbar_kws=dict(shrink=.75),
+                
+                edgecolors=None,
+                     bins=(bins,bins,),
+                 
+                data = _df)
+    corr = _df[[vx,vy]].corr().loc[vx,vy]
+    ax.text(2e1,3e3,f'corr: {corr:.2f}')
+    ax.set_yscale('log')
+    ax.set_xscale('log')
+    ax.set_ylim([1e1,1e4])
+    ax.set_xlim([1e1,1e4])
+    ax.set_xscale('log')
+    ax.set_ylabel(f'{vy} '+'[cm$^{-3}$]')
+    ax.set_xlabel(f'{vx} '+'[cm$^{-3}$]')
+    ax.set_title(mo)
+
+    lims = ax.get_xlim()
+    ax.plot(lims,lims,'k', linewidth=.5)
+#fig.suptitle(f'Distribution at {select_station} in July & August')
+    
+
+fn = make_fn_eval('_'.join(models),f'2dist_Nx_conc_{vx}_against_{vy}')
+sns.despine(fig)
+fig.tight_layout()
+fig.savefig(fn, dpi=150)
+fig.savefig(fn.with_suffix('.pdf'),)
+
+# %%
+fig, axs = plt.subplots(1,5,figsize = [12,4],sharex=True, sharey=True, dpi=200)
+seas = 'JA'
+vy = 'N100'
+vx = 'N50-100'
+for i, mo in enumerate(dic_df_mod_case.keys()):
+    
+    #v = 'N100'
+    _df_mod = dic_df_mod_case[mo][mod2cases[mo][0]].copy()
+    _df = _df_mod[_df_mod.index.month.isin(season2month[seas])].copy().resample('d').mean()
+    _df['N50-100'] = _df['N50'] - _df['N100']
+    #_df['hour'] = _df.index.hour
+    ax = axs[i]
+    bins = np.linspace(1,4,40)
+
+    #for mo, ax in zip(models,axs_sub):
+    sns.histplot(y=vy, x=vx,#orbins=bins_, alpha=0.5, 
+                                    # hue='hour', 
+                #col = 'dir',
+                ax=ax,
+                cmap = sns.color_palette("mako_r", as_cmap=True),
+                log_scale=(True, True),
+                     cbar=True, cbar_kws=dict(shrink=.75),
+                
+                edgecolors=None,
+                     bins=(bins,bins,),
+                 
+                data = _df)
+    corr = _df[[vx,vy]].corr().loc[vx,vy]
+    ax.text(4e1,2e3,f'corr: {corr:.2f}')
+    ax.set_yscale('log')
+    ax.set_xscale('log')
+    ax.set_ylim([3e1,6e3])
+    ax.set_xlim([3e1,6e3])
+    ax.set_xscale('log')
+    ax.set_ylabel(f'{vy} '+'[cm$^{-3}$]')
+    ax.set_xlabel(f'{vx} '+'[cm$^{-3}$]')
+    ax.set_title(mo)
+
+    lims = ax.get_xlim()
+    ax.plot(lims,lims,'k', linewidth=.5)
+#fig.suptitle(f'Distribution at {select_station} in July & August')
+    
+
+fn = make_fn_eval('_'.join(models),f'2dist_Nx_conc_{vx}_against_{vy}')
+sns.despine(fig)
+fig.tight_layout()
+fig.savefig(fn, dpi=150)
+fig.savefig(fn.with_suffix('.pdf'),)
+
+# %%
+fig, axs = plt.subplots(1,5,figsize = [12,4],sharex=True, sharey=True, dpi=200)
+seas = 'JA'
+vx = 'N50'
+vy = 'N100'
+for i, mo in enumerate(dic_df_mod_case.keys()):
+    
+    #v = 'N100'
+    _df_mod = dic_df_mod_case[mo][mod2cases[mo][0]].copy()
+    _df = _df_mod[_df_mod.index.month.isin(season2month[seas])].copy().resample('d').mean()
     #_df['hour'] = _df.index.hour
     ax = axs[i]
     bins = np.linspace(1,4,40)

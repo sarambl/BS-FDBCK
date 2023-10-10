@@ -184,7 +184,9 @@ def get_least_square_fit_and_labs(df_s, v_x, v_y, fit_func = 'linear', return_fu
         return popt, pcov, label, out_func
 
     return popt, pcov, label
-def get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'linear', return_func=False,
+def get_odr_fit_and_labs(df_s, v_x, v_y,
+                         fit_func = 'linear',
+                         return_func=False,
                          return_out_obj = False,
                          least_square_kwrgs=None,
                          pprint=True,
@@ -246,7 +248,7 @@ def get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'linear', return_func=False,
 
     label = lab_func(popt)
     label = label
-    print('reason for haltng')
+    print('reason for halting')
 
     if out.stopreason[0]=='Iteration limit reached':
         popt, pcov = get_least_squares_fit(df_s, out_func, v_x,v_y,beta0, least_square_kwrgs= least_square_kwrgs)

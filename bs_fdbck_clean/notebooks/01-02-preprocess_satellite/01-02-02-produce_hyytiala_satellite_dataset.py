@@ -94,7 +94,7 @@ fl = list(path_out_postproc.glob('*.nc'))
 fl.sort()
 
 # %%
-postproc_data = path_measurement_data /'SMR'/'processed'
+postproc_data = path_measurement_data /'SMEARII'/'processed'
 path_station_dataset =postproc_data /'SMEAR_data_comb_hourly.csv'
 
 # %%
@@ -423,10 +423,13 @@ df_station_mh_sum['Org_STP'].quantile([0.33333,0.66666])
 # ## Add station values to satellite dataset: 
 
 # %%
+df_station_mh_med_sum['HYY_META.T168']
+
+# %%
 ds_sat_hyy['OA_STP'] = df_station_mh_med_sum['Org_STP']
 ds_sat_hyy['OA_amb'] = df_station_mh_med_sum['Org_amb']
 
-for v in ['N50','N100','N200']:
+for v in ['N50','N100','N200','HYY_META.T168']:
     ds_sat_hyy[v] = df_station_mh_med_sum[v]
 
 # %%
@@ -456,6 +459,9 @@ ds_sat_hyy
 # %%
 ds_sat_hyy = ds_sat_hyy.rename({'y':'LAT','x':'LON'}).squeeze()#.to_dataframe().dropna()
 
+# %%
+ds_sat_hyy
+
 # %% [markdown]
 # ## Calculate ACSM data in STP:
 
@@ -467,7 +473,11 @@ ds_sat_hyy_rn = ds_sat_hyy.rename({'Cloud_Effective_Radius_Liquid_Mean':'CER (mi
                            'Cloud_Optical_Thickness_Liquid_Mean':'COT',
                            'Cloud_Water_Path_Liquid_Mean':'CWP (g m^-2)',
                           'OA_STP':'OA (microgram m^-3)',
+                                   'HYY_META.T168':'T_C',
                           })
+
+# %%
+ds_sat_hyy_rn
 
 # %% [markdown]
 # ## Save dataset: 
@@ -486,5 +496,7 @@ df_sat_rn = ds_sat_hyy_rn.squeeze().to_dataframe().dropna()
 
 # %%
 ds_sat_rn = df_sat_rn.to_xarray()
+
+# %%
 
 # %%

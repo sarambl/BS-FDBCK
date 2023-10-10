@@ -51,12 +51,18 @@ fn_obs_comb_data_full_time =postproc_data_obs /'ATTO_data_comb_hourly.nc'
 # %%
 plot_path = Path(f'Plots/{select_station}')
 
+# %% [markdown]
+# ## Select model level
+
+# %%
+model_lev_i=-2
+
 
 # %%
 def make_fn_eval(case,_type):
     #_x = v_x.split('(')[0]
     #_y = v_y.split('(')[0]
-    f = f'evalNx_echam_{case}_{_type}_{select_station}.png'
+    f = f'evalNx_echam_{case}_{_type}_{select_station}_lev{model_lev_i}.png'
     return plot_path /f
 
 
@@ -110,9 +116,6 @@ temperature = 273.15
 
 
 # %%
-model_lev_i=-3
-
-# %%
 import pandas as pd
 
 # %% [markdown]
@@ -125,10 +128,9 @@ for mod in models:
     dic_df_pre[mod] = dict()
     for ca in mod2cases[mod]:
         print(mod, ca)
-        if model_lev_i !=-2:
-            fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}_ilev{model_lev_i}.csv'
-        else:
-            fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}.csv'
+        fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}_ilev{model_lev_i}.csv'
+        #else:
+        #    fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}.csv'
 
         #fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}.csv'
         print(fn_out)
@@ -140,7 +142,7 @@ for mod in models:
 for mod in models:
     for ca in mod2cases[mod]:
         _df = dic_df_pre[mod][ca]
-        for v in ['OA','N50','N100','N200','N50-500','N100-500','N200-500']:
+        for v in ['OA','N50','N100','N200','N500','N50-500','N100-500','N200-500']:
             if f'{v}_STP' in _df.columns:
                 if v in _df.columns:
                     _df = _df.rename({v:f'{v}_orig'}, axis=1)
@@ -307,6 +309,37 @@ linestyle_dic = {
 
 
 
+
+# %%
+for m in models + ['Observations']:
+    c = list(dic_df_pre[m].keys())[0]
+    _df = dic_df_pre[m][c]
+    print(m)
+    if m=='Observations':
+        _df.groupby(_df.index.hour).mean()['temperature'].plot(label=m)         
+    else:
+        _df.groupby(_df.index.hour).mean()['T_C'].dropna(axis=0).plot(marker='*',label=m)         
+    
+plt.legend()
+#plt.xlim(['2014-07','2014-08'])
+
+# %% [markdown]
+# ### Controle that EC-Earth has correct time zone also for TM5 by checking that diurnal cycle of isoprene emissions and temperature align
+
+# %%
+m = 'EC-Earth'
+
+# %%
+c = list(dic_df_pre[m].keys())[0]
+_df = dic_df_pre[m][c]
+print(m)
+f, ax = plt.subplots()
+_df.groupby(_df.index.hour).mean()['T_C'].dropna(axis=0).plot(marker='*',label=m, c='r')         
+_df.groupby(_df.index.hour).mean()['emiisop'].dropna(axis=0).plot(marker='*',label=m, ax=ax.twinx())         
+    
+plt.legend()
+ax.set_xticks(np.arange(24))
+ax.grid()
 
 # %% [markdown]
 # ## Timeseries
@@ -1398,6 +1431,112 @@ for i, mo in enumerate(dic_df_mod_case.keys()):
     ax.set_ylim([1e0,1e4])
     ax.set_xlim([1e0,1e4])
     
+    ax.set_xscale('log')
+    ax.set_ylabel(f'{vy} '+'[cm$^{-3}$]')
+    ax.set_xlabel(f'{vx} '+'[cm$^{-3}$]')
+    ax.set_title(mo)
+
+    lims = ax.get_xlim()
+    ax.plot(lims,lims,'k', linewidth=.5)
+#fig.suptitle(f'Distribution at {select_station} in July & August')
+    
+
+fn = make_fn_eval('_'.join(models),f'2dist_Nx_conc_{vx}_against_{vy}')
+sns.despine(fig)
+fig.tight_layout()
+fig.savefig(fn, dpi=150)
+fig.savefig(fn.with_suffix('.pdf'),)
+
+# %%
+import datetime
+
+# %%
+fig, axs = plt.subplots(1,5,figsize = [12,4],sharex=True, sharey=True, dpi=200)
+seas = 'MAM'
+vy = 'N100-500'
+vx = 'N50-100'
+for i, mo in enumerate(dic_df_mod_case.keys()):
+    
+    #v = 'N100'
+    _df_mod = dic_df_mod_case[mo][mod2cases[mo][0]].copy()
+    _df = _df_mod[_df_mod.index.month.isin(season2month[seas])].copy()
+    _df_shifted = _df.copy()
+    _df_shifted.index = _df.index - datetime.timedelta(hours=0)
+    
+    _df['N50-100'] = _df_shifted['N50-500'] - _df_shifted['N100-500']
+    #_df['hour'] = _df.index.hour
+    ax = axs[i]
+    bins = np.linspace(1,4,40)
+
+    #for mo, ax in zip(models,axs_sub):
+    sns.histplot(y=vy, x=vx,#orbins=bins_, alpha=0.5, 
+                                    # hue='hour', 
+                #col = 'dir',
+                ax=ax,
+                cmap = sns.color_palette("mako_r", as_cmap=True),
+                log_scale=(True, True),
+                     cbar=True, cbar_kws=dict(shrink=.75),
+                
+                edgecolors=None,
+                     bins=(bins,bins,),
+                 
+                data = _df)
+    corr = _df[[vx,vy]].corr().loc[vx,vy]
+    ax.text(2e1,3e3,f'corr: {corr:.2f}')
+    ax.set_yscale('log')
+    ax.set_xscale('log')
+    ax.set_ylim([1e1,1e4])
+    ax.set_xlim([1e1,1e4])
+    ax.set_xscale('log')
+    ax.set_ylabel(f'{vy} '+'[cm$^{-3}$]')
+    ax.set_xlabel(f'{vx} '+'[cm$^{-3}$]')
+    ax.set_title(mo)
+
+    lims = ax.get_xlim()
+    ax.plot(lims,lims,'k', linewidth=.5)
+#fig.suptitle(f'Distribution at {select_station} in July & August')
+    
+
+fn = make_fn_eval('_'.join(models),f'2dist_Nx_conc_{vx}_against_{vy}')
+sns.despine(fig)
+fig.tight_layout()
+fig.savefig(fn, dpi=150)
+fig.savefig(fn.with_suffix('.pdf'),)
+
+# %%
+fig, axs = plt.subplots(1,5,figsize = [12,4],sharex=True, sharey=True, dpi=200)
+seas = 'MAM'
+vy = 'N100-500'
+vx = 'N50-100'
+for i, mo in enumerate(dic_df_mod_case.keys()):
+    
+    #v = 'N100'
+    _df_mod = dic_df_mod_case[mo][mod2cases[mo][0]].copy()
+    _df = _df_mod[_df_mod.index.month.isin(season2month[seas])].copy().resample('d').mean()
+    _df['N50-100'] = _df['N50-500'] - _df['N100-500']
+    #_df['hour'] = _df.index.hour
+    ax = axs[i]
+    bins = np.linspace(1,4,40)
+
+    #for mo, ax in zip(models,axs_sub):
+    sns.histplot(y=vy, x=vx,#orbins=bins_, alpha=0.5, 
+                                    # hue='hour', 
+                #col = 'dir',
+                ax=ax,
+                cmap = sns.color_palette("mako_r", as_cmap=True),
+                log_scale=(True, True),
+                     cbar=True, cbar_kws=dict(shrink=.75),
+                
+                edgecolors=None,
+                     bins=(bins,bins,),
+                 
+                data = _df)
+    corr = _df[[vx,vy]].corr().loc[vx,vy]
+    ax.text(4e1,2e3,f'corr: {corr:.2f}')
+    ax.set_yscale('log')
+    ax.set_xscale('log')
+    ax.set_ylim([3e1,6e3])
+    ax.set_xlim([3e1,6e3])
     ax.set_xscale('log')
     ax.set_ylabel(f'{vy} '+'[cm$^{-3}$]')
     ax.set_xlabel(f'{vx} '+'[cm$^{-3}$]')

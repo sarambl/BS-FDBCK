@@ -125,6 +125,15 @@ varlist_tm5 = [
     'emiisop'
 ]
 varlist_ifs_gg = [
+    'var70',
+    'var71',
+    'var74',
+    'var75',
+    'var176',
+    'var177',
+    'var210',
+    'var211',
+
     #    'var68',
     #    'var69',
     #    'var70',
@@ -156,7 +165,7 @@ varlist_ifs_gg = [
 ]
 varlist_ifs_t =[
     'var130',
-]
+  ]
 
 varlist_dic ={
     'TM5':varlist_tm5,

@@ -1190,7 +1190,7 @@ hue_var = 'N100-500'
 hue_var_cat = f'{hue_var}_category'
 hue_labs = [f'{hue_var} low', f'{hue_var} high']
 
-itterations = 50000
+itterations = 1000
 
 
 
@@ -1418,8 +1418,491 @@ fn = make_fn(hue_var, y_var1,x_var,comment=f'{y_var2}_diff_median', relplot=True
 print(fn)
 #fig.savefig(fn, dpi=150)
 #fig.tight_layout()
+fig.savefig(fn, dpi=150)
+fig.savefig(fn.with_suffix('.pdf'), dpi=150)
+plt.show()
+
+### Grid box avg
+
+# %% [markdown] tags=[]
+# ## Calculate CIs with bootstrap: N50
+
+# %%
+hue_var = 'N50-500'
+hue_var_cat = f'{hue_var}_category'
+hue_labs = [f'{hue_var} low', f'{hue_var} high']
+
+itterations =1000
+
+
+
+x_var = 'CWP_cut2lm'
+y_var1 = 'COT'
+y_var2 = 'r_eff'
+
+
+
+dic_median_CI = dict()
+for ax, y_var in zip(axs,[y_var1, y_var2]):
+    dic_median_CI[y_var] = dict()
+    for key in dic_df.keys():
+        print(key)
+        if (key in ['EC-Earth', 'UKESM']) and (y_var=='COT'):
+            continue
+        _df = dic_df[key].copy()
+    
+        _df_lim =_df.copy() 
+        notna = (_df_lim[x_var].notna() & _df_lim[y_var].notna())&(_df_lim[hue_var_cat].notna())
+        _df_lim = _df_lim[notna]
+        print('Total number of days:')
+        print(len(_df_lim.reset_index()['time'].unique()))
+        #_df_lim = _df_lim[_df_lim[y_var].notna()]
+        #_df_lim = _df_lim[_df_lim[hue_var_cat].notna()]
+    
+        _df_low = _df_lim[_df_lim[hue_var_cat] == hue_labs[0]]
+        _df_high = _df_lim[_df_lim[hue_var_cat] == hue_labs[1]]
+        
+        med_low = _df_low.groupby(x_var).median()
+        med_high = _df_high.groupby(x_var).median()
+        #std_low = _df_low.groupby(x_var).std()
+        #std_high = _df_high.groupby(x_var).std()
+        n_low = _df_low.groupby(x_var).count()['OA_category']
+        n_high = _df_high.groupby(x_var).count()['OA_category']
+        df_numb = pd.DataFrame()
+        df_numb['n_low'] = n_low
+        df_numb['n_high'] = n_high
+        df_numb['n_str'] = df_numb['n_low'].astype(str) + '/' + df_numb['n_high'].astype(str) 
+        
+    
+    
+        diff_med = med_high-med_low
+        
+        df_sample_quant =bootstrap_return_quantiles(_df_low,_df_high, 
+                               quantiles = None,
+                               var=y_var, category=x_var, itts=itterations)
+        #df_bs_samp_med = df_sample_quant.loc[0.5]
+        dic_median_CI[y_var][key]=dict()
+        dic_median_CI[y_var][key]['sample_median']=diff_med.copy()
+        dic_median_CI[y_var][key]['bootstrap_quant']=df_sample_quant.copy()
+        dic_median_CI[y_var][key]['number']=df_numb#['n_str']
+
+
+# %%
+v = 'COT'
+v_hue = 'N50-500'
+for source in dic_median_CI[v].keys():
+    print(source)
+    sa_med = dic_median_CI[v][source]['sample_median']
+
+    sa_num = dic_median_CI[v][source]['number']
+
+    sa_num['n_tot'] = sa_num['n_low'] + sa_num['n_high']
+    _df_both = pd.concat([sa_med,sa_num], axis=1)
+    
+    fn = make_fn('sample_stats', v_hue,v, comment=source).with_suffix('.csv')
+    _df_both.to_csv(fn)
+
+    print((sa_med['COT']*sa_num['n_tot']).sum()/ sa_num['n_tot'].sum())
+
+
+# %%
+dic_median_CI['r_eff'].keys()
+
+
+# %%
+v = 'r_eff'
+for source in dic_median_CI[v].keys():
+    print(source)
+    sa_med = dic_median_CI[v][source]['sample_median']
+
+    sa_num = dic_median_CI[v][source]['number']
+
+    sa_num['n_tot'] = sa_num['n_low'] + sa_num['n_high']
+    _df_both = pd.concat([sa_med,sa_num], axis=1)
+    
+    fn = make_fn('sample_stats', v_hue,v, comment=source).with_suffix('.csv')
+    _df_both.to_csv(fn)
+
+    
+
+# %%
+dic_season_nicename = {
+    'JFM':'Jan-Mar',
+    'FMA':'Feb-Apr',
+    'FMAM':'Feb-May',
+    'JFMAM':'Jan-May',
+    'MAM':'Mar-May',
+    'JA':'July-Aug',
+}
+
+# %% [markdown] tags=[]
+# # Final plot: 
+
+# %% tags=[]
+figsize = [6,8]
+_palette = palette_OA_2
+ylim = None#[0,25]
+alpha_err=0.4
+hue_var = 'N50-500'
+hue_var_cat = f'{hue_var}_category'
+hue_labs = [f'{hue_var} low', f'{hue_var} high']
+
+ylim2 =[-3.3,2]# [-4,4]
+markersize= 2
+
+fig, axs_all = plt.subplots(3,1,figsize=figsize, sharey='row', sharex='col', dpi=200, gridspec_kw={'height_ratios': [1, 7, 7]})
+
+ax_num =axs_all[0]
+ax_num_ukesm =axs_all[0].twiny()
+axs = axs_all[[1,2]]
+
+x_var = 'CWP_cut2lm'
+
+y_var1 = 'COT'
+y_var2 = 'r_eff'
+
+ylab1 = r'$\Delta $ Cloud optical depth []'
+ylab2 = r'$\Delta r_e$ [$\mu$ m]'
+y_pos = 0
+
+
+
+
+
+for ax_use, y_var in zip(axs,[y_var1, y_var2]):
+    if y_var !='COT':
+        ax_use_twin = ax_use.twiny()
+
+    
+    for key in dic_df.keys():
+        if (key in ['EC-Earth', 'UKESM']) and (y_var =='COT'):
+            continue
+        if key in ['UKESM','EC-Earth']:
+            ax = ax_use_twin
+            ax.set_xlabel('UKESM', color=cdic_model[key], fontsize=10)  # we already handled the x-label with ax1
+            ax.tick_params(axis='x', labelcolor=cdic_model[key])
+
+        else:
+            ax = ax_use
+        diff_med = dic_median_CI[y_var][key]['sample_median']
+        df_sample_quant = dic_median_CI[y_var][key]['bootstrap_quant']
+        df_number = dic_median_CI[y_var][key]['number']
+
+        df_bootstrap_med = df_sample_quant.loc[0.5]
+        plt_med = diff_med[y_var]
+        label = key
+
+        ax.scatter(plt_med.index, plt_med, ec=cdic_model[key],lw=2, label=label,s=50,fc='none')
+        ax.plot(plt_med.index, plt_med, c=cdic_model[key],lw=1, label='__nolegend__',zorder=-20,
+               alpha=.2)
+        #ax.scatter(df_bootstrap_med.index, df_bootstrap_med, c=cdic_model[key], label=key,s=200, marker='x')
+
+        df_sample_quant_CI= df_sample_quant.drop(labels=0.5).T
+        yerr = np.abs(df_sample_quant_CI.T - plt_med)
+        
+        ax.errorbar(plt_med.index, plt_med, yerr=yerr.values, 
+                    #capsize=5,capthick=2,
+                    c=cdic_model[key], linewidth=0, elinewidth=3, alpha=alpha_err,zorder=0)
+        
+        if y_var !=y_var2:
+            continue
+        df_number['n_str'] = df_number['n_low'].astype(str) + '/' + df_number['n_high'].astype(str) 
+        #ax.text(df_numb.index, 
+
+        for xi in df_number.index:
+
+            si = df_number.loc[xi]['n_str']
+            if key in ['UKESM','EC-Earth']:
+                xi = xi*((ax_use.get_xlim()[1]-ax_use.get_xlim()[0])/(ax.get_xlim()[1]-ax.get_xlim()[0]))
+                print('hey')
+                #ax_num_ukesm.text(xi, y_pos, si,
+                #    c = cdic_model[key],
+                #        fontsize=6,
+                #    horizontalalignment='center',
+                #        alpha=.7,
+                #   )
+            #else:
+            ax_num.text(xi, y_pos, si,
+                    c = cdic_model[key],
+                        fontsize=6,
+                    horizontalalignment='center',
+                        alpha=.7,
+                           )
+        #            transform=ax.transAxes,)
+        y_pos -=.22
+        
+ax_num.xaxis.set_visible(False)
+ax_num_ukesm.xaxis.set_visible(False)
+ax_num.yaxis.set_visible(False)
+ax_num_ukesm.yaxis.set_visible(False)
+sns.despine(ax=ax_num,right=True, left = True, bottom=True, top=True)
+sns.despine(ax=ax_num_ukesm,right=True, left = True, bottom=True, top=True)
+for ax in axs:
+    ax.axhline(0, c='.5',zorder=-10,lw=1, linestyle='--')
+    
+axs[0].set_ylabel(ylab1)
+axs[1].set_ylabel(ylab2)
+axs[1].set_ylim(ylim2)
+axs[1].set_xlim([50,350])
+
+axs[1].set_xlabel('CWP [g m$^{-2}$]')
+
+ax.legend(frameon=False, loc='upper left')
+ax_use_twin.legend(frameon=False)
+
+ax_num.set_title(f'Difference between high {hue_var} and low {hue_var}: {dic_season_nicename[season]}')
+
+#ax_num.set_ylim([0,1])
+
+sns.despine(ax = axs[0])
+sns.despine(ax = axs[1])
+fn = make_fn(hue_var, y_var1,x_var,comment=f'{y_var2}_diff_median', relplot=True)
+print(fn)
+#fig.tight_layout()
+fig.savefig(fn, dpi=150)
+fig.savefig(fn.with_suffix('.pdf'), dpi=150)
+plt.show()
+
+### Grid box avg
+
+# %% [markdown] tags=[]
+# ## Calculate CIs with bootstrap: N20
+
+# %%
+hue_var = 'N200-500'
+hue_var_cat = f'{hue_var}_category'
+hue_labs = [f'{hue_var} low', f'{hue_var} high']
+
+itterations =1000
+
+
+
+x_var = 'CWP_cut2lm'
+y_var1 = 'COT'
+y_var2 = 'r_eff'
+
+
+
+dic_median_CI = dict()
+for ax, y_var in zip(axs,[y_var1, y_var2]):
+    dic_median_CI[y_var] = dict()
+    for key in dic_df.keys():
+        print(key)
+        if (key in ['EC-Earth', 'UKESM']) and (y_var=='COT'):
+            continue
+        _df = dic_df[key].copy()
+    
+        _df_lim =_df.copy() 
+        notna = (_df_lim[x_var].notna() & _df_lim[y_var].notna())&(_df_lim[hue_var_cat].notna())
+        _df_lim = _df_lim[notna]
+        print('Total number of days:')
+        print(len(_df_lim.reset_index()['time'].unique()))
+        #_df_lim = _df_lim[_df_lim[y_var].notna()]
+        #_df_lim = _df_lim[_df_lim[hue_var_cat].notna()]
+    
+        _df_low = _df_lim[_df_lim[hue_var_cat] == hue_labs[0]]
+        _df_high = _df_lim[_df_lim[hue_var_cat] == hue_labs[1]]
+        
+        med_low = _df_low.groupby(x_var).median()
+        med_high = _df_high.groupby(x_var).median()
+        #std_low = _df_low.groupby(x_var).std()
+        #std_high = _df_high.groupby(x_var).std()
+        n_low = _df_low.groupby(x_var).count()['OA_category']
+        n_high = _df_high.groupby(x_var).count()['OA_category']
+        df_numb = pd.DataFrame()
+        df_numb['n_low'] = n_low
+        df_numb['n_high'] = n_high
+        df_numb['n_str'] = df_numb['n_low'].astype(str) + '/' + df_numb['n_high'].astype(str) 
+        
+    
+    
+        diff_med = med_high-med_low
+        
+        df_sample_quant =bootstrap_return_quantiles(_df_low,_df_high, 
+                               quantiles = None,
+                               var=y_var, category=x_var, itts=itterations)
+        #df_bs_samp_med = df_sample_quant.loc[0.5]
+        dic_median_CI[y_var][key]=dict()
+        dic_median_CI[y_var][key]['sample_median']=diff_med.copy()
+        dic_median_CI[y_var][key]['bootstrap_quant']=df_sample_quant.copy()
+        dic_median_CI[y_var][key]['number']=df_numb#['n_str']
+
+
+# %%
+v = 'COT'
+v_hue = 'N200-500'
+for source in dic_median_CI[v].keys():
+    print(source)
+    sa_med = dic_median_CI[v][source]['sample_median']
+
+    sa_num = dic_median_CI[v][source]['number']
+
+    sa_num['n_tot'] = sa_num['n_low'] + sa_num['n_high']
+    _df_both = pd.concat([sa_med,sa_num], axis=1)
+    
+    fn = make_fn('sample_stats', v_hue,v, comment=source).with_suffix('.csv')
+    _df_both.to_csv(fn)
+
+    print((sa_med['COT']*sa_num['n_tot']).sum()/ sa_num['n_tot'].sum())
+
+
+# %%
+dic_median_CI['r_eff'].keys()
+
+
+# %%
+v = 'r_eff'
+for source in dic_median_CI[v].keys():
+    print(source)
+    sa_med = dic_median_CI[v][source]['sample_median']
+
+    sa_num = dic_median_CI[v][source]['number']
+
+    sa_num['n_tot'] = sa_num['n_low'] + sa_num['n_high']
+    _df_both = pd.concat([sa_med,sa_num], axis=1)
+    
+    fn = make_fn('sample_stats', v_hue,v, comment=source).with_suffix('.csv')
+    _df_both.to_csv(fn)
+
+    
+
+# %%
+dic_season_nicename = {
+    'JFM':'Jan-Mar',
+    'FMA':'Feb-Apr',
+    'FMAM':'Feb-May',
+    'JFMAM':'Jan-May',
+    'MAM':'Mar-May',
+    'JA':'July-Aug',
+}
+
+# %% [markdown] tags=[]
+# # Final plot: 
+
+# %% tags=[]
+figsize = [6,8]
+_palette = palette_OA_2
+ylim = None#[0,25]
+alpha_err=0.4
+hue_var = 'N200-500'
+hue_var_cat = f'{hue_var}_category'
+hue_labs = [f'{hue_var} low', f'{hue_var} high']
+
+ylim2 =[-3.3,2]# [-4,4]
+markersize= 2
+
+fig, axs_all = plt.subplots(3,1,figsize=figsize, sharey='row', sharex='col', dpi=200, gridspec_kw={'height_ratios': [1, 7, 7]})
+
+ax_num =axs_all[0]
+ax_num_ukesm =axs_all[0].twiny()
+axs = axs_all[[1,2]]
+
+x_var = 'CWP_cut2lm'
+
+y_var1 = 'COT'
+y_var2 = 'r_eff'
+
+ylab1 = r'$\Delta $ Cloud optical depth []'
+ylab2 = r'$\Delta r_e$ [$\mu$ m]'
+y_pos = 0
+
+
+
+
+
+for ax_use, y_var in zip(axs,[y_var1, y_var2]):
+    if y_var !='COT':
+        ax_use_twin = ax_use.twiny()
+
+    
+    for key in dic_df.keys():
+        if (key in ['EC-Earth', 'UKESM']) and (y_var =='COT'):
+            continue
+        if key in ['UKESM','EC-Earth']:
+            ax = ax_use_twin
+            ax.set_xlabel('UKESM', color=cdic_model[key], fontsize=10)  # we already handled the x-label with ax1
+            ax.tick_params(axis='x', labelcolor=cdic_model[key])
+
+        else:
+            ax = ax_use
+        diff_med = dic_median_CI[y_var][key]['sample_median']
+        df_sample_quant = dic_median_CI[y_var][key]['bootstrap_quant']
+        df_number = dic_median_CI[y_var][key]['number']
+
+        df_bootstrap_med = df_sample_quant.loc[0.5]
+        plt_med = diff_med[y_var]
+        label = key
+
+        ax.scatter(plt_med.index, plt_med, ec=cdic_model[key],lw=2, label=label,s=50,fc='none')
+        ax.plot(plt_med.index, plt_med, c=cdic_model[key],lw=1, label='__nolegend__',zorder=-20,
+               alpha=.2)
+        #ax.scatter(df_bootstrap_med.index, df_bootstrap_med, c=cdic_model[key], label=key,s=200, marker='x')
+
+        df_sample_quant_CI= df_sample_quant.drop(labels=0.5).T
+        yerr = np.abs(df_sample_quant_CI.T - plt_med)
+        
+        ax.errorbar(plt_med.index, plt_med, yerr=yerr.values, 
+                    #capsize=5,capthick=2,
+                    c=cdic_model[key], linewidth=0, elinewidth=3, alpha=alpha_err,zorder=0)
+        
+        if y_var !=y_var2:
+            continue
+        df_number['n_str'] = df_number['n_low'].astype(str) + '/' + df_number['n_high'].astype(str) 
+        #ax.text(df_numb.index, 
+
+        for xi in df_number.index:
+
+            si = df_number.loc[xi]['n_str']
+            if key in ['UKESM','EC-Earth']:
+                xi = xi*((ax_use.get_xlim()[1]-ax_use.get_xlim()[0])/(ax.get_xlim()[1]-ax.get_xlim()[0]))
+                print('hey')
+                #ax_num_ukesm.text(xi, y_pos, si,
+                #    c = cdic_model[key],
+                #        fontsize=6,
+                #    horizontalalignment='center',
+                #        alpha=.7,
+                #   )
+            #else:
+            ax_num.text(xi, y_pos, si,
+                    c = cdic_model[key],
+                        fontsize=6,
+                    horizontalalignment='center',
+                        alpha=.7,
+                           )
+        #            transform=ax.transAxes,)
+        y_pos -=.22
+        
+ax_num.xaxis.set_visible(False)
+ax_num_ukesm.xaxis.set_visible(False)
+ax_num.yaxis.set_visible(False)
+ax_num_ukesm.yaxis.set_visible(False)
+sns.despine(ax=ax_num,right=True, left = True, bottom=True, top=True)
+sns.despine(ax=ax_num_ukesm,right=True, left = True, bottom=True, top=True)
+for ax in axs:
+    ax.axhline(0, c='.5',zorder=-10,lw=1, linestyle='--')
+    
+axs[0].set_ylabel(ylab1)
+axs[1].set_ylabel(ylab2)
+axs[1].set_ylim(ylim2)
+axs[1].set_xlim([50,350])
+
+axs[1].set_xlabel('CWP [g m$^{-2}$]')
+
+ax.legend(frameon=False, loc='upper left')
+ax_use_twin.legend(frameon=False)
+
+ax_num.set_title(f'Difference between high {hue_var} and low {hue_var}: {dic_season_nicename[season]}')
+
+#ax_num.set_ylim([0,1])
+
+sns.despine(ax = axs[0])
+sns.despine(ax = axs[1])
+fn = make_fn(hue_var, y_var1,x_var,comment=f'{y_var2}_diff_median', relplot=True)
+print(fn)
 #fig.savefig(fn, dpi=150)
-#fig.savefig(fn.with_suffix('.pdf'), dpi=150)
+#fig.tight_layout()
+fig.savefig(fn, dpi=150)
+fig.savefig(fn.with_suffix('.pdf'), dpi=150)
 plt.show()
 
 ### Grid box avg

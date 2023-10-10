@@ -200,14 +200,15 @@ for v_x, ax in zip(['COT','CWP (g m^-2)', 'OA (microgram m^-3)','CER (micrometer
         print(v_x)
         #st_dev = _ds_d[v_x].mean(['LAT','LON']).groupby(_ds_d['month']).std()
         #_dfmq = _ds_d[v_x].mean(['LAT','LON']).groupby(_ds_d['month']).quantile([0.05,.33,.5, .66, .95])   
-        _dfmq = _ds_d.to_dataframe().reset_index().groupby('month').quantile([0.05,.33,.5, .66, .95]).to_xarray().rename({'level_1':'quantile'})[v_x]
+        _dfmq = _ds_d.to_dataframe().reset_index().groupby('month').quantile([0.05,.16, .33,.5, .66, .84,.95]).to_xarray().rename({'level_1':'quantile'})[v_x]
         mean = _ds_d[v_x].mean(['LAT','LON']).groupby(_ds_d['month']).median()
-        ax.fill_between(_dfmq.month, _dfmq.sel(quantile=0.05), _dfmq.sel(quantile=0.95),  alpha=.3, label='0.05-0.95th')
-        ax.fill_between(_dfmq.month, _dfmq.sel(quantile=0.33), _dfmq.sel(quantile=0.66),  alpha=.3, label= '0.33-0.66th')
-        mean.plot(ax = ax, alpha=0.8, marker='*') 
+        ax.fill_between(_dfmq.month, _dfmq.sel(quantile=0.05), _dfmq.sel(quantile=0.95),  alpha=.25, label='0.05-0.95th', color='#14a0d2', edgecolor=None)
+        ax.fill_between(_dfmq.month, _dfmq.sel(quantile=0.16), _dfmq.sel(quantile=0.84),  alpha=.25, label= '0.16-0.84th', color='#0d71ba', edgecolor=None)
+        ax.fill_between(_dfmq.month, _dfmq.sel(quantile=0.33), _dfmq.sel(quantile=0.66),  alpha=.25, label= '0.33-0.66th', color= '#123c5f', edgecolor=None)
+        mean.plot(ax = ax, alpha=1, marker='.', c='#fdc854') 
         ax.set_ylabel(dic_nice_ylabel[v_x])
 fig.tight_layout()
-axs[-1,0].legend(frameon=False)#bbox_to_anchor=(1,1,))
+axs[-1,0].legend(frameon=False, fontsize=8)#bbox_to_anchor=(1,1,))
 ax.set_xticks(list(range(1,13)))
 for ax in axs.flatten():
     ax.set_xlabel('')
@@ -391,7 +392,7 @@ case_name_noresm = 'OsloAero_intBVOC_f09_f09_mg17_fssp245'
 # #### Input files
 
 # %%
-fn_noresm = path_extract_latlon_outdata/ case_name_noresm/f'{case_name_noresm}.h1._{from_time1}-{to_time2}_concat_subs_{str_coordlims}_lev1_final.nc'
+#fn_noresm = path_extract_latlon_outdata/ case_name_noresm/f'{case_name_noresm}.h1._{from_time1}-{to_time2}_concat_subs_{str_coordlims}_lev1_final.nc'
 fn_noresm_csv = path_extract_latlon_outdata/ case_name_noresm/f'{case_name_noresm}.h1._{from_time1}-{to_time2}_concat_subs_{str_coordlims}_lev1_finalALL_year.csv'
 
 # %%
@@ -425,8 +426,9 @@ str_to = pd.to_datetime(to_time2).strftime('%Y%m')
 input_path_echam = path_extract_latlon_outdata / model_name_echam / case_name_echam 
 
 # %%
-fn_final_echam = input_path_echam / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}.nc'
+#fn_final_echam = input_path_echam / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}.nc'
 fn_final_echam_csv = input_path_echam / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}ALL_year.csv'
+print(fn_final_echam_csv)
 
 # %%
 cases_echam = [case_name_echam]
@@ -461,7 +463,7 @@ input_path_ec_earth = path_extract_latlon_outdata / model_name_ec_earth/ case_na
 # %%
 
 # %%
-fn_final_ec_earth = input_path_ec_earth / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}.nc'
+#fn_final_ec_earth = input_path_ec_earth / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}.nc'
 fn_final_ec_earth_csv = input_path_ec_earth / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}ALL_year.csv'
 
 # %%
@@ -502,7 +504,7 @@ input_path_ukesm = path_extract_latlon_outdata / model_name_ukesm/ case_name_uke
 # %%
 
 # %%
-fn_final_ukesm = input_path_ukesm / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}.nc'
+#fn_final_ukesm = input_path_ukesm / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}.nc'
 fn_final_ukesm_csv = input_path_ukesm / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}ALL_year.csv'
 
 # %%
@@ -1580,7 +1582,7 @@ def bootstrap_return_quantiles(_df_low,_df_high,
 hue_labs = ['OA low', 'OA high']
 hue_var = 'OA_category'
 
-itterations = 50000
+itterations = 1000
 
 
 

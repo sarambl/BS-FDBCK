@@ -82,13 +82,16 @@ def make_fn_scat(case, v_x, v_y):
 plot_path.mkdir(exist_ok=True, parents=True)
 
 # %%
-from bs_fdbck.constants import path_measurement_data
+from bs_fdbck_clean.constants import path_measurement_data
 postproc_data = path_measurement_data /'model_station'/select_station
-postproc_data_obs = path_measurement_data /select_station/'processed'
+postproc_data_obs = path_measurement_data /'SMEARII'/'processed'
 
 
 # %%
 fn_obs_comb_data_full_time =postproc_data_obs /'SMEAR_data_comb_hourly.csv'
+
+# %%
+fn_obs_comb_data_full_time
 
 # %%
 plot_path = Path(f'Plots/{select_station}')
@@ -117,10 +120,10 @@ di_mod2cases = mod2cases.copy()
 
 
 # %%
-from bs_fdbck.preprocess.launch_monthly_station_collocation import launch_monthly_station_output
-from bs_fdbck.util.Nd.sizedist_class_v2.SizedistributionBins import SizedistributionStationBins
-from bs_fdbck.util.collocate.collocateLONLAToutput import CollocateLONLATout
-from bs_fdbck.data_info.variable_info import list_sized_vars_nonsec, list_sized_vars_noresm
+from bs_fdbck_clean.preprocess.launch_monthly_station_collocation import launch_monthly_station_output
+from bs_fdbck_clean.util.Nd.sizedist_class_v2.SizedistributionBins import SizedistributionStationBins
+from bs_fdbck_clean.util.collocate.collocateLONLAToutput import CollocateLONLATout
+from bs_fdbck_clean.data_info.variable_info import list_sized_vars_nonsec, list_sized_vars_noresm
 import useful_scit.util.log as log
 log.ger.setLevel(log.log.INFO)
 import time
@@ -195,8 +198,8 @@ dic_mod_ca = dic_df_pre.copy()
 # ### Fit funcs
 
 # %%
-from bs_fdbck.util.BSOA_datamanip.fits import *
-from bs_fdbck.util.BSOA_datamanip.atto import season2month
+from bs_fdbck_clean.util.BSOA_datamanip.fits import *
+from bs_fdbck_clean.util.BSOA_datamanip.atto import season2month
 
 
 # %% [markdown] tags=[]
@@ -232,7 +235,7 @@ di_mod2cases = mod2cases.copy()
 dic_df_mod_case = dic_mod_ca.copy()
 
 # %%
-from bs_fdbck.util.BSOA_datamanip import calculate_daily_median_summer,calculate_summer_median
+from bs_fdbck_clean.util.BSOA_datamanip import calculate_daily_median_summer,calculate_summer_median
 
 # %%
 
@@ -349,13 +352,55 @@ ca = mod2cases[mod][0]
 # %% [markdown]
 # ## Compute daily medians:
 
-# %%
-
-# %%
+# %% [markdown]
+# ### Save daily medians 
 
 # %%
 path_save_daily_medians = Path(f'Temp_data/{select_station}_daily_medians')
 path_save_daily_medians.parent.mkdir(exist_ok=True)
+
+# %% [markdown]
+# ### Remove values where fewer than x values
+
+# %%
+minimal_number_per_day = 20
+obs_per_day =  dic_df_mod_case['Observations']['Observations'].resample('D').count()['OA']
+obs_per_day
+
+# %%
+_df = dic_df_mod_case['UKESM']['AEROCOMTRAJ']
+_df_m = _df.resample('d').median()
+_df_m['obs_per_day'] = obs_per_day
+
+# %%
+_df_m['obs_per_day'].plot(marker='*', linewidth=0)
+
+_df_c = _df[_df['some_obs_missing']==False].resample('d').count()['OA']
+_df_c.plot(marker='.', linewidth=0)
+
+# %%
+
+# %%
+dic_df_med = dict()
+for mo in dic_df_mod_case.keys():
+    for ca in dic_df_mod_case[mo].keys():
+        print(mo)
+        if len(dic_df_mod_case[mo].keys())>1:
+            use_name = f'{mo}_{ca}'
+        else:
+            use_name = mo
+            
+        _df = dic_df_mod_case[mo][ca]
+        
+
+        _df = _df[_df['some_obs_missing']==False]
+        _df_med = _df.resample('D').median()
+        _df_med['obs_per_day'] = obs_per_day
+        #_df_count = _df.resample('D').count()['OA']
+        dic_df_med[use_name] = _df_med[_df_med['obs_per_day']>minimal_number_per_day]
+        fp = path_save_daily_medians.parent / f'{path_save_daily_medians.name}_{use_name}.csv'
+        dic_df_med[use_name].to_csv(fp)
+
 
 # %%
 dic_df_med = dict()
@@ -1350,7 +1395,9 @@ for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
     mask_months = select_months(df_s, season=season)
     df_s = df_s[mask_months].copy()
     
+    #popt, pov, label, func = get_log_fit_abc(df_s,v_x,v_y, return_func=True)
     popt, pov, label, func = get_log_fit_abc(df_s,v_x,v_y, return_func=True)
+    
     x = np.linspace(*xlims)
     ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
     #     label='fit: %5.3f exp( %5.3f x) +  %5.3f' % tuple(popt))

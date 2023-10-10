@@ -72,6 +72,15 @@ varlist_tm5 = [
     'emiisop'
 ]
 varlist_ifs_gg = [
+    'var70',
+    'var71',
+    'var74',
+    'var75',
+    'var176',
+    'var177',
+    'var210',
+    'var211',
+
 #    'var68',
 #    'var69',
 #    'var70',
@@ -103,6 +112,7 @@ varlist_ifs_gg = [
 ]
 varlist_ifs_t =[
     'var130',
+
 ]
 
 varlist_dic ={
@@ -124,6 +134,7 @@ cases_orig = [case]
 
 time_res = 'hour'
 print('hey2222  !!')
+# %%
 for mod_ver in ['TM5', 'IFS_T', 'IFS_GG']:
     print(mod_ver)
     varlist = varlist_dic[mod_ver]

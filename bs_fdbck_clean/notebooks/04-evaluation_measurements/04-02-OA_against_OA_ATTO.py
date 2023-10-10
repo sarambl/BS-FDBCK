@@ -53,11 +53,11 @@ fn_obs_comb_data_full_time =postproc_data_obs /'ATTO_data_comb_hourly.nc'
 plot_path = Path(f'Plots/{select_station}')
 
 
-# %%
+# %% tags=[]
 def make_fn_eval(case,_type):
     #_x = v_x.split('(')[0]
     #_y = v_y.split('(')[0]
-    f = f'evalOA_echam_{case}_{_type}_{select_station}.png'
+    f = f'evalOA_echam_{case}_{_type}_{select_station}_lev{model_lev_i}.png'
     return plot_path /f
 
 
@@ -82,7 +82,7 @@ di_mod2cases = mod2cases.copy()
 # ## Which model level to use:
 
 # %%
-model_lev_i=-3
+model_lev_i=-2 
 
 # %%
 from bs_fdbck_clean.preprocess.launch_monthly_station_collocation import launch_monthly_station_output
@@ -127,10 +127,7 @@ for mod in models:
     dic_df_pre[mod] = dict()
     for ca in mod2cases[mod]:
         print(mod, ca)
-        if model_lev_i !=-2:
-            fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}_ilev{model_lev_i}.csv'
-        else:
-            fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}.csv'
+        fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}_ilev{model_lev_i}.csv'
 
         #fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}.csv'
         print(fn_out)
@@ -284,6 +281,79 @@ dic_df_pre['ECHAM-SALSA']['SALSA_BSOA_feedback']['OA'].plot()
 dic_df_pre['ECHAM-SALSA']['SALSA_BSOA_feedback'].resample('h').ffill(limit=1)['OA'].plot()         
 dic_df_pre['ECHAM-SALSA']['SALSA_BSOA_feedback']['OA'].plot()
 plt.xlim(['2014-07','2014-08'])
+
+# %%
+dic_df_pre.keys()
+
+# %%
+for m in models + ['Observations']:
+    c = list(dic_df_pre[m].keys())[0]
+    _df = dic_df_pre[m][c]
+    print(m)
+    if m=='Observations':
+        _df.groupby(_df.index.hour).mean()['temperature'].plot(label=m)         
+    else:
+        _df.groupby(_df.index.hour).mean()['T_C'].dropna(axis=0).plot(marker='*',label=m)         
+    
+plt.legend()
+#plt.xlim(['2014-07','2014-08'])
+
+# %% [markdown]
+# ### Controle that EC-Earth has correct time zone also for TM5 by checking that diurnal cycle of isoprene emissions and temperature align
+
+# %%
+m = 'EC-Earth'
+
+# %%
+c = list(dic_df_pre[m].keys())[0]
+_df = dic_df_pre[m][c]
+print(m)
+f, ax = plt.subplots()
+_df.groupby(_df.index.hour).mean()['T_C'].dropna(axis=0).plot(marker='*',label=m, c='r')         
+_df.groupby(_df.index.hour).mean()['emiisop'].dropna(axis=0).plot(marker='*',label=m, ax=ax.twinx())         
+    
+plt.legend()
+ax.set_xticks(np.arange(24))
+ax.grid()
+
+# %%
+_df['emiisop']
+
+# %%
+import datetime
+
+# %%
+for m in models + ['Observations']:
+    c = list(dic_df_pre[m].keys())[0]
+    _df = dic_df_pre[m][c].copy(deep=True)
+
+    print(m)
+    if m=='Observations':
+        a =_df.groupby(_df.index.hour).mean()['temperature']
+    else:
+        a = _df.groupby(_df.index.hour).mean().interpolate(method='quadratic', limit=5)['T_C']#.plot(marker='*',label=m)         
+    ((a-a.mean())/(a.max()-a.min())).plot(label=m, marker='*')         
+    
+plt.legend()
+#plt.xlim(['2014-07','2014-08'])
+
+# %%
+m = 'UKESM'
+c = list(dic_df_pre[m].keys())[0]
+_df = dic_df_pre[m][c].copy(deep=True)
+
+a = _df.groupby(_df.index.hour).mean()['T_C'].dropna()
+
+a
+
+# %%
+m = 'NorESM'
+c = list(dic_df_pre[m].keys())[0]
+_df = dic_df_pre[m][c].copy(deep=True)
+
+a = _df.groupby(_df.index.hour).mean()['T_C']
+
+a
 
 # %% [markdown] tags=[]
 # ## Merge with observations:
@@ -448,7 +518,7 @@ seasons2months2
 seasons2months
 
 # %%
-fig, axs = plt.subplots(4,1, sharex=True, figsize=[5,8], dpi=100)
+fig, axs = plt.subplots(4,1, sharex=True, figsize=[7,8], dpi=100)
 ax = axs[1]
 #pl_obs = df_anom_OA['Obs'].groupby(df_anom_OA['obs'].index.hour).mean()
 #pl_obs.plot(ax=ax,label='Observations', c='k')
@@ -482,12 +552,11 @@ for seas, ax in zip(seasons2months, axs):
     # ax.set_title("$OA'$: Average diurnal anomaly") 
     ax.set_title(f"{seas} $OA'$: Median diurnal anomaly") 
 
-    ax.set_ylim([-2,2])
+    ax.set_ylim([-3,3])
 
-ax.legend(frameon=False)
+ax.legend(frameon=False, bbox_to_anchor=(1., 1.))
 
 
-plt.legend(frameon=False)
 ax.set_xlabel('Time of day [h]')
 for ax in axs: 
     ax.set_ylabel('OA  [$\mu$gm$^{-3}$]')
@@ -497,7 +566,7 @@ ax.set_xticks([0,2,4,6,8,10,12,14,16,18,20,22,])
 
 ax.set_xlim([0,23])
 fn = make_fn_eval('_'.join(models), 'diurnal_mean_dev')
-
+print(fn)
 fig.savefig(fn.with_suffix('.png'))
 fig.savefig(fn.with_suffix('.pdf'))
 
@@ -551,7 +620,7 @@ ax.set_xticks([0,2,4,6,8,10,12,14,16,18,20,22,])
 
 ax.set_xlim([0,23])
 fn = make_fn_eval('_'.join(models), 'diurnal_mean')
-
+print(fn)
 fig.savefig(fn.with_suffix('.png'))
 fig.savefig(fn.with_suffix('.pdf'))
 
@@ -598,7 +667,7 @@ ax.set_xticks(np.arange(1,13))
 
 ax.set_xlim([1,12])
 fn = make_fn_eval('_'.join(models), 'diurnal_mean')
-
+print(fn)
 fig.savefig(fn.with_suffix('.png'))
 fig.savefig(fn.with_suffix('.pdf'))
 
@@ -667,6 +736,7 @@ plt.suptitle('Distribution at ATTO')
 fn = make_fn_eval('noresm_echam_seasons2','hist')
 fig.tight_layout()
 sns.despine(fig)
+print(fn)
 plt.savefig(fn, dpi=300)
 
 
@@ -719,6 +789,7 @@ plt.suptitle('Distribution at ATTO')
 fn = make_fn_eval('noresm_echam_seasons','hist')
 fig.tight_layout()
 sns.despine(fig)
+print(fn)
 plt.savefig(fn, dpi=300)
 
 
@@ -754,6 +825,7 @@ for seas,i in zip(['DJF','MAM','JJA','SON'], range(4)):
                      cbar=True, cbar_kws=dict(shrink=.75),
                 
                      bins=(bins,bins,),
+             rasterized=True,
                  
                 data = _df)
 
@@ -775,6 +847,50 @@ for seas,i in zip(['DJF','MAM','JJA','SON'], range(4)):
 fig.tight_layout()
 
 fn = make_fn_eval('_'.join(models),'2Dhist_seasons_OA')
+print(fn)
+fig.savefig(fn, dpi=300)
+fig.savefig(fn.with_suffix('.pdf'), dpi=300)
+
+# %%
+fig, axs = plt.subplots(4,4,figsize = [14,13],sharex=True, sharey=False)
+
+for seas,i in zip(['DJF','MAM','JJA','SON'], range(4)):
+    axs_sub = axs[i]
+    _df = df_OA_all[df_OA_all.index.month.isin(seasons2months[seas])].resample('d').mean()
+    _df = _df[_df['Obs']>0]
+    bins = np.linspace(-.9,3,50)
+
+    #_df['hour'] = _df.index.hour
+    for mo, ax in zip(models,axs_sub):
+        sns.histplot(y=mo, x='Obs',
+                ax=ax,
+                cmap = sns.color_palette("mako_r", as_cmap=True),
+                log_scale=(True, True),
+                     cbar=True, cbar_kws=dict(shrink=.75),
+                
+                     bins=(bins,bins,),
+             rasterized=True,
+                 
+                data = _df)
+
+
+        ax.set_yscale('log')
+        ax.set_xscale('log')
+        ax.set_xlim([0.2,50])
+        ax.set_ylim([0.2,50])
+
+        ax.set_ylabel(f'{mo} OA '+'[$\mu$gm$^{-3}$]')
+        ax.set_xlabel('Observed OA [$\mu$gm$^{-3}$]')
+
+        ax.set_title(seas)
+
+
+        lims = ax.get_xlim()
+        ax.plot(lims,lims,'k', linewidth=.5)
+
+fig.tight_layout()
+
+fn = make_fn_eval('_'.join(models),'2Dhist_seasons_OA_daily')
 fig.savefig(fn, dpi=300)
 fig.savefig(fn.with_suffix('.pdf'), dpi=300)
 
@@ -811,6 +927,86 @@ for mo, ax in zip(models,axs.flatten()):
 
     #_df.groupby('hour').count().plot(ax = ax.twinx())
     
+fn = make_fn_eval('_'.join(models),'2dhist_dist_time')
+fig.savefig(fn, dpi=300)
+fig.savefig(fn.with_suffix('.pdf'), dpi=300)
+
+# %%
+fig, axs = plt.subplots(4,sharey=True, figsize=[10,8])
+ax = axs[0]
+_df = df_anom_OA
+_df['hour'] = _df.index.hour
+for mo, ax in zip(models,axs.flatten()):
+    sns.histplot(y=f'{mo}', x=f'hour',#orbins=bins_, alpha=0.5, 
+                                     #hue=f'Obs', 
+                #col = 'dir',
+                ax=ax,
+                #alpha=0.4,
+                cmap='YlGnBu',
+                 
+                
+                #edgecolors=None,
+                data = _df)
+
+    #ax.set_yscale('log')
+    # ax.set_xscale('symlog')
+    #ax.set_ylim([-3.5,3.5])
+    #ax.set_ylim([0.1,30])
+
+    #ax.set_xlabel(f'{mo} OA '+'[$\mu$gm$^{-3}$]')
+    #ax.set_ylabel('Observed OA [$\mu$gm$^{-3}$]')
+
+
+
+    lims = ax.get_xlim()
+    #ax.plot(lims,lims,'k', linewidth=.5)
+
+    #_df.groupby('hour').count().plot(ax = ax.twinx())
+
+#ax.set_ylim([-1.5,1.5])
+fn = make_fn_eval('_'.join(models),'2dhist_dist_time')
+fig.savefig(fn, dpi=300)
+fig.savefig(fn.with_suffix('.pdf'), dpi=300)
+
+# %%
+df_OA_diffObs = (df_OA_all.drop('Obs', axis=1).T-df_OA_all['Obs']).T
+
+# %%
+df_OA_diffObs
+
+# %%
+fig, axs = plt.subplots(4,sharey=False, figsize=[10,8])
+ax = axs[0]
+_df = df_OA_diffObs
+_df['hour'] = _df.index.hour
+for mo, ax in zip(models,axs.flatten()):
+    sns.histplot(y=f'{mo}', x=f'hour',#orbins=bins_, alpha=0.5, 
+                                     #hue=f'Obs', 
+                #col = 'dir',
+                ax=ax,
+                #alpha=0.4,
+                cmap='YlGnBu',
+                 
+                
+                #edgecolors=None,
+                data = _df)
+
+    #ax.set_yscale('log')
+    # ax.set_xscale('symlog')
+    ax.set_ylim([-3.5,10])
+    #ax.set_ylim([0.1,30])
+
+    #ax.set_xlabel(f'{mo} OA '+'[$\mu$gm$^{-3}$]')
+    #ax.set_ylabel('Observed OA [$\mu$gm$^{-3}$]')
+
+
+
+    lims = ax.get_xlim()
+    #ax.plot(lims,lims,'k', linewidth=.5)
+
+    #_df.groupby('hour').count().plot(ax = ax.twinx())
+
+#ax.set_ylim([-3,3])
 fn = make_fn_eval('_'.join(models),'2dhist_dist_time')
 fig.savefig(fn, dpi=300)
 fig.savefig(fn.with_suffix('.pdf'), dpi=300)

@@ -1107,7 +1107,7 @@ def bootstrap_return_quantiles(_df_low,_df_high,
 hue_labs = ['OA low', 'OA high']
 hue_var = 'OA_category'
 
-itterations = 50000
+itterations = 1000
 
 
 
@@ -1309,101 +1309,8 @@ plt.show()
 
 ### Grid box avg
 
-# %% tags=[]
-figsize = [6,8]
-_palette = palette_OA_2
-ylim = None#[0,25]
-alpha_err=0.4
-hue_lan_high= ['OA low', 'OA high']
-hue_var = 'OA_category'
-
-ylim2 =None# [-4,4]
-markersize= 2
-
-fig, axs_all = plt.subplots(3,1,figsize=figsize, sharey='row', sharex='col', dpi=200, gridspec_kw={'height_ratios': [1, 7, 7]})
-
-ax_num =axs_all[0]
-axs = axs_all[[1,2]]
-
-x_var = 'CWP_cut2lm'
-y_var1 = 'COT'
-y_var2 = 'r_eff'
-
-ylab1 = r'$\Delta $ Cloud optical depth []'
-ylab2 = r'$\Delta r_e$ [$\mu$ m]'
-y_pos = 0
-
-
-ax = axs[0]
-for ax, y_var in zip(axs,[y_var1, y_var2]):
-    
-    for key in dic_df.keys():
-        if (key=='EC-Earth') and (y_var =='COT'):
-            continue
-        diff_med = dic_median_CI[y_var][key]['sample_median']
-        df_sample_quant = dic_median_CI[y_var][key]['bootstrap_quant']
-        df_number = dic_median_CI[y_var][key]['number']
-
-        df_bootstrap_med = df_sample_quant.loc[0.5]
-        plt_med = diff_med[y_var]
-        ax.scatter(plt_med.index, plt_med, ec=cdic_model[key],lw=2, label=key,s=50,fc='none')
-        ax.plot(plt_med.index, plt_med, c=cdic_model[key],lw=1, label='__nolegend__',zorder=-20,
-               alpha=.2)
-        #ax.scatter(df_bootstrap_med.index, df_bootstrap_med, c=cdic_model[key], label=key,s=200, marker='x')
-
-        df_sample_quant_CI= df_sample_quant.drop(labels=0.5).T
-        yerr = np.abs(df_sample_quant_CI.T - plt_med)
-        
-        ax.errorbar(plt_med.index, plt_med, yerr=yerr.values, 
-                    #capsize=5,capthick=2,
-                    c=cdic_model[key], linewidth=0, elinewidth=3, alpha=alpha_err,zorder=0)
-        
-        if y_var !=y_var2:
-            continue
-        df_number['n_str'] = df_number['n_low'].astype(str) + '/' + df_number['n_high'].astype(str) 
-        #ax.text(df_numb.index, 
-
-        for xi in df_number.index:
-            si = df_number.loc[xi]['n_str']
-            ax_num.text(xi, y_pos, si,
-                    c = cdic_model[key],
-                        fontsize=6,
-                    horizontalalignment='center',
-                        alpha=.7,
-                   )
-        #            transform=ax.transAxes,)
-        y_pos -=.22
-        
-ax_num.xaxis.set_visible(False)
-ax_num.yaxis.set_visible(False)
-sns.despine(ax=ax_num,right=True, left = True, bottom=True, top=True)
-for ax in axs:
-    ax.axhline(0, c='.5',zorder=-10,lw=1, linestyle='--')
-    
-axs[0].set_ylabel(ylab1)
-axs[1].set_ylabel(ylab2)
-axs[1].set_ylim(ylim2)
-
-axs[1].set_xlabel('CWP [g m$^{-2}$]')
-
-ax.legend(frameon=False)
-
-ax_num.set_title(f'Difference between high OA and low OA: {season}')
-
-#ax_num.set_ylim([0,1])
-
-sns.despine(ax = axs[0])
-sns.despine(ax = axs[1])
-fn = make_fn(hue_var, y_var1,x_var,comment=f'{y_var2}_diff_median', relplot=True)
-print(fn) 
-
-#fig.savefig(fn, dpi=150)
-#fig.tight_layout()
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-plt.show()
-
-### Grid box avg
+# %%
+dic_median_CI[y_var].keys()#[key]['sample_median']
 
 # %% [markdown]
 # ## Supplementary plots

@@ -42,6 +42,7 @@ def xr_import_EC_earth(
         path = constants.get_input_datapath(model=model)
     # %%
     fl_TM5 = list(path.glob('*TM5*.nc'))
+    print(fl_TM5)
     fl_IFS_T = list(path.glob('T_IFS*.nc'))
     fl_IFS_GG = list(path.glob('IFS_GG*.nc'))
     fl_TM5.sort()

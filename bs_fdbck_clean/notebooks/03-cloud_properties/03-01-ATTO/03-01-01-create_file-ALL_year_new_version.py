@@ -73,7 +73,7 @@ lat_lims = [-8., -1.]
 
 lat_station = -2.150
 lon_station = 360 - 59.009
-model_lev_i = -1
+model_lev_i = -2
 
 temperature = 273.15  # K
 
@@ -126,10 +126,10 @@ for mod in models:
     dic_df_pre[mod] = dict()
     for ca in mod2cases[mod]:
         print(mod, ca)
-        if model_lev_i !=-2:
-            fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}_ilev{model_lev_i}.csv'
-        else:
-            fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}.csv'
+        #if model_lev_i !=-2:
+        fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}_ilev{model_lev_i}.csv'
+        #else:
+        #    fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}.csv'
 
         #fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}.csv'
         print(fn_out)
@@ -144,10 +144,10 @@ for mod in models:
     dic_df_station[mod] = dict()
     for ca in mod2cases[mod]:
         print(mod, ca)
-        if model_lev_i !=-2:
-            fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}_ilev{model_lev_i}.csv'
-        else:
-            fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}.csv'
+        #if model_lev_i !=-2:
+        fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}_ilev{model_lev_i}.csv'
+        #else:
+        #    fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}.csv'
         
         print(fn_out)
         dic_df_station[mod][ca] = pd.read_csv(fn_out, index_col=0)
@@ -405,6 +405,20 @@ ds_all.where(ds_all['FCTL']>.1)['FCTL'].where(ds_all['TGCLDCWP_incld']>50).plot(
 
 # %%
 ds_all = ds_all.where(ds_all['FCTL']>.1)
+
+# %% [markdown] tags=[]
+# #### NorESM Shift time step to start of period to be consistent with measurements and other models
+
+# %%
+#ind = df.index
+#df.index = ind - datetime.timedelta(hours=1)
+if ds_all['time'].attrs['timezone'] == 'utc':
+    ds_all['time'] = ds_all['time'].to_pandas().index - timedelta(hours=1)
+    #ds_all['time'].attrs['timezone'] = 'utc+2'
+    ds_all['time'].attrs['timezone'] = 'utc'
+    
+    print('shifted time by -1 for NorESM')
+
 
 # %% [markdown] tags=[]
 # #### Shift timezone
@@ -840,6 +854,11 @@ ds_comb_station = ds_comb_station.assign_coords(station=[select_station])
 ds_all['hour'] = ds_all['time.hour']
 ds_all['T_C'].groupby(ds_all['hour']).mean().sel(lat=lat_station, lon=lon_station, method='nearest').plot()
 ds_comb_station['T_C'].groupby(ds_comb_station['time.hour']).mean().plot()
+
+# %%
+
+ds_all['T_C'].sel(time=slice('2013-06','2013-08')).sel(lat=lat_station, lon=lon_station, method='nearest').plot(label='full dataset',linewidth=0, marker='.', markersize=5)
+ds_comb_station['T_C'].sel(time=slice('2013-06','2013-08')).plot(label='station dataset',linewidth=0,  marker='.', markersize=5, alpha=.2)
 
 # %%
 ds_all['hour'] = ds_all['time.hour']
@@ -1607,12 +1626,11 @@ ds_all = xr.open_dataset(fn_final_ukesm)
 ds_all['time'].attrs['timezone'] = 'utc'
 
 
+# %%
+
 # %% [markdown]
 #
 # #### Add variables from station data to imitate using station measurements
-
-# %%
-model_name_ukesm
 
 # %%
 df_comb_station = dic_df_station[model_name_ukesm][case_name_ukesm]
@@ -1702,6 +1720,19 @@ ds_all['lwp_incld'].where(ds_all['weight_of_cdnc_top_cloud']>0.1).plot.hist(bins
 # %%
 ds_all = ds_all.where(ds_all['weight_Reff_2d_distrib']>0.1)
 
+# %% [markdown]
+# #### UKESM Shift time step to start of period to be consistent with measurements and other models
+# Note that station data is already corrected in the same way. 
+
+# %%
+if ds_all['time'].attrs['timezone'] == 'utc':
+    ds_all['time'] = ds_all['time'].to_pandas().index - timedelta(hours=1)
+    #ds_all['time'].attrs['timezone'] = 'utc+2'
+    ds_all['time'].attrs['timezone'] = 'utc'
+    
+    print('shifted time by -1 for UKESM')
+
+
 # %% [markdown] tags=[]
 # #### Shift timezone
 
@@ -1743,12 +1774,18 @@ lon_station
 
 
 # %%
+ds_comb_station
+
+# %%
+ds_all
+
+# %%
 _ds = xr.merge([ds_all[['Temp']].sel(lat=lat_station, lon=lon_station, method='nearest'), ds_comb_station[['T_C']]])
 _ds['notnull'] = (_ds['Temp'].notnull()) & (_ds['T_C'].notnull())
 
 # %%
-(_ds['Temp']-273.15).where(_ds['notnull']).plot()
-(_ds['T_C']).where(_ds['notnull']).plot()
+(_ds['Temp']-273.15).where(_ds['notnull']).plot(marker='*')
+(_ds['T_C']).where(_ds['notnull']).plot(marker='*')
 
 
 # %%
@@ -1760,10 +1797,6 @@ _da2 = (ds_all['Temp']-273.15).sel(time=slice('2013','2018')).sel(lat=lat_statio
 # %%
 _da.where(_da2.notnull()).plot()
 _da2.plot()
-
-# %%
-_da.where(_da2.notnull()).groupby(_da['time.hour']).mean().plot()
-_da2.groupby(_da2['time.hour']).mean().plot()
 
 # %%
 df_comb_station['OA_STP'].plot()

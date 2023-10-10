@@ -65,9 +65,20 @@ class MinorSymLogLocator(Locator):
                                   '%s type.' % type(self))
 
 
-def insert_abc(ax1, Font_size, subfig_count):
+def insert_abc(ax1, Font_size, subfig_count, xy=None):
     #print('inserting abc')
-    ax1.annotate('(%s)' %(chr(ord('a') + subfig_count)), xy=get_axis_limits(ax1), size = Font_size)
+    if xy is None:
+        xy=get_axis_limits(ax1)
+    ax1.annotate('(%s)' %(chr(ord('a') + subfig_count)), xy=xy, size = Font_size)
+
+def insert_abc_axs(axs, Font_size=None,scale_1=1., scale_2=1.):
+
+    #print('inserting abc')
+    subfig_count = len(axs.flatten())
+    for i, ax in enumerate(axs.flatten()):
+        xy = get_axis_limits(ax, scale_1=scale_1, scale_2=scale_2)
+
+        insert_abc(ax, Font_size, i, xy=xy)
 
 
 def get_axis_limits(ax, scale_1=1., scale_2=1.):

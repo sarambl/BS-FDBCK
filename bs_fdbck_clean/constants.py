@@ -22,7 +22,8 @@ package_base_path = analysis_base_path / project_name
 raw_data_path_NorESM = project_base_path / 'noresm_archive'
 raw_data_path_echam = project_base_path / 'other_data' / 'BS-FDBCK' / 'ECHAM-SALSA'
 raw_data_path_ukesm = project_base_path / 'other_data' / 'BS-FDBCK' / 'UKESM'
-raw_data_path_ecEarth = Path('/proj/aerosol_esm_lund/users/x_casve/BIG_ISMO/output/ECE3_output_Sara/')
+raw_data_path_ecEarth= project_base_path / 'other_data' / 'BS-FDBCK' / 'EC-Earth'/'ECE3_output_Sara'
+#raw_data_path_ecEarth = Path('/proj/aerosol_esm_lund/users/x_casve/BIG_ISMO/output/ECE3_output_Sara/')
 
 pathdic_raw_data = {'NorESM': raw_data_path_NorESM,
                     'ECHAM-SALSA': raw_data_path_echam,

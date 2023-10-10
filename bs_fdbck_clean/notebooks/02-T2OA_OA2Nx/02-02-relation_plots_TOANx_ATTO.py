@@ -22,11 +22,11 @@
 # %autoreload 2
 
 from pathlib import Path
-from bs_fdbck.util.BSOA_datamanip import ds2df_inc_preprocessing, ds2df_echam
-from bs_fdbck.util.collocate.collocateLONLAToutput import CollocateLONLATout
+from bs_fdbck_clean.util.BSOA_datamanip import ds2df_inc_preprocessing, ds2df_echam
+from bs_fdbck_clean.util.collocate.collocateLONLAToutput import CollocateLONLATout
 from bs_fdbck_clean.util.collocate.collocate_echam_salsa import CollocateModelEcham
 import useful_scit.util.log as log
-from bs_fdbck.util.plot.BSOA_plots import make_cool_grid, plot_scatter
+from bs_fdbck_clean.util.plot.BSOA_plots import make_cool_grid, plot_scatter
 log.ger.setLevel(log.log.INFO)
 import time
 import xarray as xr
@@ -51,9 +51,11 @@ import pandas as pd
 
 
 # %%
-from bs_fdbck.constants import path_measurement_data
+from bs_fdbck_clean.constants import path_measurement_data
 
-# %%
+# %% [markdown]
+# ## Time resolution sources:
+#
 
 # %%
 
@@ -64,7 +66,7 @@ import numpy as np
 # %%
 
 select_station = 'ATTO'
-model_lev_i = -1
+model_lev_i = -2
 
 # %%
 plot_path = Path(f'Plots/{select_station}')
@@ -74,7 +76,7 @@ plot_path = Path(f'Plots/{select_station}')
 def make_fn_scat(case, v_x, v_y):
     _x = v_x.split('(')[0]
     _y = v_y.split('(')[0]
-    f = f'scat_all_years_echam_noresm_{case}_{_x}_{_y}-ATTO_ukesm.png'
+    f = f'scat_all_years_echam_noresm_{case}_{_x}_{_y}-ATTO_ukesm_lev{model_lev_i}.png'
     return plot_path /f
 
 
@@ -85,7 +87,7 @@ plot_path.mkdir(exist_ok=True, parents=True)
 plot_path
 
 # %%
-from bs_fdbck.constants import path_measurement_data
+from bs_fdbck_clean.constants import path_measurement_data
 postproc_data = path_measurement_data /'model_station'/select_station
 postproc_data_obs = path_measurement_data /select_station/'processed'
 
@@ -131,10 +133,10 @@ for mod in models:
     dic_df_pre[mod] = dict()
     for ca in mod2cases[mod]:
         print(mod, ca)
-        if model_lev_i !=-2:
-            fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}_ilev{model_lev_i}.csv'
-        else:
-            fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}.csv'
+        #if model_lev_i !=-2:
+        fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}_ilev{model_lev_i}.csv'
+        #else:
+        #    fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}.csv'
         #fn_out = postproc_data/f'{select_station}_station_{mod}_{ca}.csv'
         print(fn_out)
         dic_df_pre[mod][ca] = pd.read_csv(fn_out, index_col=0)
@@ -197,7 +199,7 @@ for mo in models:
 dic_df_mod_case = dic_mod_ca.copy()
 
 # %%
-from bs_fdbck.util.BSOA_datamanip import calculate_daily_median_summer,calculate_summer_median
+from bs_fdbck_clean.util.BSOA_datamanip import calculate_daily_median_summer,calculate_summer_median
 
 # %% [markdown]
 # ## Rename STP values
@@ -318,10 +320,32 @@ path_save_daily_medians.parent.mkdir(exist_ok=True)
 # %%
 path_save_daily_medians
 
+# %% [markdown]
+# ### Remove values where fewer than x values
+
+# %%
+minimal_number_per_day = 20
+obs_per_day =  dic_df_mod_case['Observations']['Observations'].resample('D').count()['OA']
+obs_per_day
+
+# %%
+_df = dic_df_mod_case['UKESM']['AEROCOMTRAJ']
+_df_m = _df.resample('d').median()
+_df_m['obs_per_day'] = obs_per_day
+
+# %%
+_df_m['obs_per_day'].plot()
+
+_df_c = _df[_df['some_obs_missing']==False].resample('d').count()['OA']
+_df_c.plot()
+
+# %%
+
 # %%
 dic_df_med = dict()
 for mo in dic_df_mod_case.keys():
     for ca in dic_df_mod_case[mo].keys():
+        print(mo)
         if len(dic_df_mod_case[mo].keys())>1:
             use_name = f'{mo}_{ca}'
         else:
@@ -329,26 +353,29 @@ for mo in dic_df_mod_case.keys():
             
         _df = dic_df_mod_case[mo][ca]
         
+
         _df = _df[_df['some_obs_missing']==False]
-        dic_df_med[use_name] = _df.resample('D').median()
-        
+        _df_med = _df.resample('D').median()
+        _df_med['obs_per_day'] = obs_per_day
+        #_df_count = _df.resample('D').count()['OA']
+        dic_df_med[use_name] = _df_med[_df_med['obs_per_day']>minimal_number_per_day]
         fp = path_save_daily_medians.parent / f'{path_save_daily_medians.name}_{use_name}.csv'
         dic_df_med[use_name].to_csv(fp)
 
 
 # %%
-from bs_fdbck.util.plot.BSOA_plots import cdic_model
+from bs_fdbck_clean.util.plot.BSOA_plots import cdic_model
 import seaborn as sns
 from matplotlib import pyplot as plt, gridspec as gridspec
-from bs_fdbck.util.plot.BSOA_plots import make_cool_grid2, make_cool_grid3
+from bs_fdbck_clean.util.plot.BSOA_plots import make_cool_grid2, make_cool_grid3
 import scipy
 
 # %% [markdown]
 # ### Fit funcs
 
 # %%
-from bs_fdbck.util.BSOA_datamanip.fits import *
-from bs_fdbck.util.BSOA_datamanip.atto import season2month
+from bs_fdbck_clean.util.BSOA_datamanip.fits import *
+from bs_fdbck_clean.util.BSOA_datamanip.atto import season2month
 
 
 # %% [markdown] tags=[]
@@ -364,10 +391,7 @@ def select_months(df, season = None, month_list=None):
     return df['month'].isin(month_list)
 
 # %%
-from bs_fdbck.util.BSOA_datamanip.fits import *
-
-# %%
-from bs_fdbck.util.plot.BSOA_plots import cdic_model
+from bs_fdbck_clean.util.plot.BSOA_plots import cdic_model
 
 # %%
 season = 'FMA'
@@ -576,6 +600,7 @@ def make_plot(v_x, v_y, xlims, ylims, season,
               xscale='linear', yscale='linear',
               dic_df_med = dic_df_med,
               markersize=1,
+              marker='.',
 
              ):
     if fig is None: 
@@ -588,45 +613,19 @@ def make_plot(v_x, v_y, xlims, ylims, season,
         if ylab in label_dic:
             ylab = label_dic[v_y]
 
-    for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-        df_s =  dic_df_med[mo]
-
-        mask_months = select_months(df_s, season=season)
-        df_s = df_s[mask_months].copy()
-
-
-        sns.scatterplot(x=v_x,y=v_y, 
-                    data = df_s, 
-                    color=cdic_model[mo], 
-                    alpha=alpha_scatt*.7, 
-                    label='__nolegend__',
-                    ax = ax,
-                    #facecolor='none',
-                    edgecolor=cdic_model[mo],
-                        marker='.',
-                                                                s=markersize,
-
-                   )
-        sns.scatterplot(x=v_x,y=v_y, 
-                    data = df_s, 
-                    color=cdic_model[mo], 
-                    alpha=alpha_scatt+.1, 
-                    label='__nolegend__',
-                    ax = ax_ex,
-                    #facecolor='none',
-                    edgecolor=cdic_model[mo],
-                        marker='.',
-                    
-                                            s=markersize,
-                    
-                   )
-        ax_ex.set_title(mo, y=.95)
+    make_scatter_plot(v_x, v_y, xlims, ylims, season, 
+              xlab=xlab, ylab=ylab, alpha_scat=alpha_scat,
+             source_list = source_list, fig=fig, ax=ax, daxs=daxs, axs_extra=axs_extra,
+              xscale=xscale, yscale=yscale,
+              dic_df_med = dic_df_med,
+              markersize=markersize,
+              marker=marker,)
         
     ax.set_xlabel(xlab)
     ax.set_ylabel(ylab)
     fig.suptitle(f'ATTO, {season} season, 2012-2018', y=.95)
     xlim_dist = list(daxs['y'].get_xlim())
-    for mo in models_and_obs:
+    for mo in source_list:
 
         df_s =  dic_df_med[mo]
 
@@ -714,6 +713,47 @@ def make_plot(v_x, v_y, xlims, ylims, season,
 
     return
 
+def make_scatter_plot(v_x, v_y, xlims, ylims, season, 
+              xlab=None, ylab=None, alpha_scat=.3,
+             source_list = models_and_obs, fig=None, ax=None, daxs=None, axs_extra=None,
+              xscale='linear', yscale='linear',
+              dic_df_med = dic_df_med,
+              markersize=1,
+              marker='.',):
+    
+    for mo, ax_ex in zip(source_list, axs_extra[:]):
+        df_s =  dic_df_med[mo]
+
+        mask_months = select_months(df_s, season=season)
+        df_s = df_s[mask_months].copy()
+
+
+        sns.scatterplot(x=v_x,y=v_y, 
+                    data = df_s, 
+                    color=cdic_model[mo], 
+                    alpha=alpha_scatt*.7, 
+                    label='__nolegend__',
+                    ax = ax,
+                    #facecolor='none',
+                    edgecolor=cdic_model[mo],
+                        marker=marker,
+                        s=markersize,
+
+                   )
+        sns.scatterplot(x=v_x,y=v_y, 
+                    data = df_s, 
+                    color=cdic_model[mo], 
+                    alpha=alpha_scatt+.1, 
+                    label='__nolegend__',
+                    ax = ax_ex,
+                    #facecolor='none',
+                    edgecolor=cdic_model[mo],
+                        marker=marker,
+                        s=markersize,
+                    
+                   )
+        ax_ex.set_title(mo, y=.95)
+    return
 #### WET_mid
 
 # %% [markdown]
@@ -753,7 +793,7 @@ axs_extra = axs_extra.flatten()
 ## Settings
 alpha_scatt = 0.6
 
-xlab = r'T  [$^\circ$C]'
+xlab = r'Temperature  [$^\circ$C]'
 ylab = r'OA [$\mu g m^{-3}$]'
 
 
@@ -766,10 +806,26 @@ season='FMA'
 v_x = 'T_C'
 v_y = 'OA'
 
+dic_df_med_adj = dict()
+
+for k in dic_df_med.keys():
+    _df  = dic_df_med[k].copy()
+    _df = _df[~_df.index.year.isin([2015,2016])]
+    dic_df_med_adj[k] = _df
 
 make_plot(v_x, v_y, xlims, ylims, season, 
-              xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
+              xlab, ylab, .2, models_and_obs, fig, ax, daxs, axs_extra,
           yscale='log',
+          dic_df_med = dic_df_med,
+          markersize=10,
+         
+         )
+make_scatter_plot(v_x, v_y, xlims, ylims, season, 
+              xlab, ylab, .2, models_and_obs, fig, ax, daxs, axs_extra,
+          yscale='log',
+          dic_df_med = dic_df_med_adj,
+          markersize=30,
+                  marker='*',
          
          )
 
@@ -797,10 +853,33 @@ for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
               )
     ax_ex.set_yscale('log')
 ax.set_yscale('log')
+for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
+    df_s =  dic_df_med_adj[mo]
+    print(f'*******{mo}*****')
+    mask_months = select_months(df_s, season=season)
+    df_s = df_s[mask_months].copy()
+    #popt, pov, label, func = get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'exp', return_func=True, beta0=[0.01,.12])
+    #popt, pov, label, func = get_least_square_fit_and_labs(df_s, v_x, v_y, fit_func = 'exp', return_func=True, beta0=[0.01,.12])
+    popt, pov, label, func = get_lin_log_fit(df_s, v_x, v_y, fit_func = 'exp', return_func=True, beta0=[0.01,.12])
+    
+    _mi = df_s[v_x].min()
+    _ma = df_s[v_x].max() 
+    _xlim = [_mi*.95, _ma*1.05]
+    x = np.linspace(*_xlim)
+    
+    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
+    ax.plot(x, func(x, *popt), linestyle= '--',linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
+
+    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
+             )
+    ax_ex.plot(x, func(x, *popt),linestyle= '--', c=cdic_model[mo],label=f'{mo}: {label}',
+              )
+    ax_ex.set_yscale('log')
+ax.set_yscale('log')
 
 
     
-fn = make_fn_scat(f'exp1_{season}', v_x, v_y)
+fn = make_fn_scat(f'exp1_no2015-2016_{season}', v_x, v_y)
 ax.legend(frameon=False)
 fig.savefig(fn, dpi=150)
 fig.savefig(fn.with_suffix('.pdf'), dpi=150)
