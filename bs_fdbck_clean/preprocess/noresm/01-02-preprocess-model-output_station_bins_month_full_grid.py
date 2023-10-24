@@ -33,39 +33,26 @@ log.ger.setLevel(log.log.INFO)
 # ## Settings:
 
 # %%
-nr_of_bins = 5
-maxDiameter = 39.6
-minDiameter = 5.0  #
-history_field = '.h1.'
-
 # %%
-from_t   =    '2012-01-01'
-to_t     =    '2015-01-01'
+from_t1   =    '2012-01-01'
+to_t1     =    '2015-01-01'
 
-from_t   =    '2015-01-01'
-to_t     =    '2019-01-01'
+from_t2   =    '2015-01-01'
+to_t2     =    '2019-01-01'
+
+history_field = '.h1.'
 
 # %% [markdown]
 # ## Cases:
+case1 = 'OsloAero_intBVOC_f09_f09_mg17_full'
+case2 = 'OsloAero_intBVOC_f09_f09_mg17_ssp245'
+
+
+case2details_dic = {case1:{'from_t':from_t1, 'to_t':to_t1, 'is_sectional':False},
+                    case2:{'from_t':from_t2, 'to_t':to_t2, 'is_sectional':False},
+                    }
 
 # %%
-cases_sec = []#'OsloAeroSec_intBVOC_f19_f19',]
-cases_orig = [
-    #'OsloAero_intBVOC_f19_f19_mg17_ssp245',
-    #'OsloAeroSec_intBVOC_f19_f19_mg17_ssp245',
-    #'OsloAero_intBVOC_f09_f09_mg17_ssp245',
-    #'OsloAero_intBVOC_pertSizeDist2_f19_f19_mg17_full',
-    #'OsloAero_intBVOC_pertSizeDist_f19_f19_mg17_full',
-    #'OsloAero_intBVOC_f19_f19_mg17_full',
-    #'OsloAero_intBVOC_f09_f09_mg17_full',
-    'OsloAero_intBVOC_pert_f09_f09_mg17_full',
-    #'OsloAero_intBVOC_f09_f09_mg17_ssp245',
-    #'OsloAero_intBVOC_f19_f19_mg17_incY_full',
-
-]
-# %%
-
-
 vars_extra_ns = ['AWNC', 'AREL', 'FREQL', 'ACTNL',
                  #'ACTNI',
                  'ACTREL', 'ACTREI', 'FCTL', 'FCTI', 'CDNUMC', 'CLDTOT', 'TOT_CLD_VISTAU', 'TOT_ICLD_VISTAU', 'TGCLDIWP', 'TGCLDLWP', 'TGCLDCWP', 'FSNT', 'FLNT', 'FSNT_DRF', 'FLNT_DRF', 'FSNTCDRF', 'FLNTCDRF',
@@ -86,39 +73,22 @@ log.ger.info(f'TIMES:****: {from_t} {to_t}')
 # ## launches subprocesses that compute monthly
 
 # %%
-for case_name in cases_sec:
-    launch_monthly_station_output_noresm(case_name, True, from_time=from_t, to_time=to_t)
-for case_name in cases_orig:
-    launch_monthly_station_output_noresm(case_name, False, from_time=from_t, to_time=to_t)
-# %% [markdown]
-# ## Merge monthly
+for case_name in case2details_dic.keys():
+    from_t = case2details_dic[case_name]['from_t']
+    to_t = case2details_dic[case_name]['to_t']
+    is_sectional =case2details_dic[case_name]['is_sectional']
+    launch_monthly_station_output_noresm(case_name, is_sectional, from_time=from_t, to_time=to_t)
+    # %% [markdown]
+    # ## Merge monthly
 
 
 
-print('DONE WITH MONTHLY FIELDS!!!!')
+    print('DONE WITH MONTHLY FIELDS!!!!')
 
-# %%
-for case_name in cases_sec:
-    varlist = list_sized_vars_noresm + vars_extra_ns
-    c = CollocateLONLATout(case_name, from_t, to_t,
-                           True,
-                           'hour',
-                           space_res='locations',
-
-                           history_field=history_field)
-    if c.check_if_load_raw_necessary(varlist):
-        time1 = time.time()
-        a = c.make_station_data_merge_monthly(varlist)
-        print(a)
-
-        time2 = time.time()
-        print('DONE : took {:.3f} s'.format((time2 - time1)))
-    else:
-        print('UPS')
-for case_name in cases_orig:
+    # %%
     varlist = list_sized_vars_nonsec + vars_extra_ns # list_sized_vars_noresm
     c = CollocateLONLATout(case_name, from_t, to_t,
-                           False,
+                           is_sectional,
                            'hour',
                            space_res='locations',
                            history_field=history_field)
@@ -133,25 +103,20 @@ for case_name in cases_orig:
     else:
         print('UPS')
 
-# %%
+    # %%
 
-# %% [markdown]
-#
-# ## Compute binned dataset
+    # %% [markdown]
+    #
+    # ## Compute binned dataset
 
-# %% [markdown]
-# ### Make station N50 etc.
+    # %% [markdown]
+    # ### Make station N50 etc.
 
-# %%
-for case_name in cases_sec:
-    s = SizedistributionStationBins(case_name, from_t, to_t, [minDiameter, maxDiameter], True, 'hour',
-                                    space_res='full',
-                                    nr_bins=nr_of_bins, history_field=history_field)
-    s.compute_Nd_vars()
+    # %%
 
-for case_name in cases_orig:
-    s = SizedistributionStationBins(case_name, from_t, to_t, [minDiameter, maxDiameter], False, 'hour',
-                                    space_res='full',
-                                    nr_bins=nr_of_bins, history_field=history_field)
+
+    s = SizedistributionStationBins(case_name, from_t, to_t, None, False, 'hour',
+                                        space_res='full',
+                                        nr_bins=None, history_field=history_field)
     s.compute_Nd_vars()
 
