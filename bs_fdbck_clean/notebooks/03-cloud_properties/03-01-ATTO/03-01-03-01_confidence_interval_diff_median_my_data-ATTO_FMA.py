@@ -44,20 +44,6 @@ from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 
 # %%
-import scienceplots
-import scienceplots
-plt.style.use([
-    'default',
-    # 'science',
-    'acp',
-    # 'sp-grid',
-    'no-black',
-    'no-latex',
-    'illustrator-safe'
-])
-
-
-# %%
 # %load_ext autoreload
 # %autoreload 2
 
@@ -171,6 +157,21 @@ ds_smr_sat
 
 # %%
 from bs_fdbck_clean.util.BSOA_datamanip.atto import season2month
+
+# %%
+import scienceplots
+import scienceplots
+plt.style.use([
+    'default',
+    #'science',
+    #'acp',
+    'nature',
+    # 'sp-grid',
+    'no-black',
+    'no-latex',
+    'illustrator-safe'
+])
+
 
 # %% [markdown]
 # ## Annual distribution
@@ -894,7 +895,7 @@ leg_els = [
 ]
 
 ax.legend(handles = leg_els, frameon=False)
-ax.set_xlabel('Cloud optical thickness')
+ax.set_xlabel('Cloud optical thickness []')
 #plt.ylim([0,250])
 print(len(_df))
 sns.despine(fig)
@@ -1582,7 +1583,7 @@ def bootstrap_return_quantiles(_df_low,_df_high,
 hue_labs = ['OA low', 'OA high']
 hue_var = 'OA_category'
 
-itterations = 1000
+itterations = 50000
 
 
 
@@ -1684,10 +1685,35 @@ dic_season_nicename = {
     'JA':'July─Aug',
 }
 
+# %%
+# %load_ext autoreload
+# %autoreload 2
+
+# %%
+
+# %%
+import scienceplots
+import scienceplots
+plt.style.use([
+    'default',
+    #'science',
+    'acp',
+    #'nature',
+    # 'sp-grid',
+    'no-black',
+    'no-latex',
+    'illustrator-safe'
+])
+
+
+# %%
+import matplotlib as mpl
+
 # %% [markdown] tags=[]
 # # Final plot: 
 
 # %% tags=[]
+reduce_factor = 1
 figsize = [6,8]
 _palette = palette_OA_2
 ylim = None#[0,25]
@@ -1695,7 +1721,7 @@ alpha_err=0.4
 hue_lan_high= ['OA low', 'OA high']
 hue_var = 'OA_category'
 
-xlim = [50,350]
+xlim = [25,350]
 xlim2 = [50,700]
 ylim2 =[-3.3,2]# [-4,4]
 markersize= 2
@@ -1711,7 +1737,7 @@ x_var = 'CWP_cut2lm'
 y_var1 = 'COT'
 y_var2 = 'r_eff'
 
-ylab1 = r'$\Delta $ Cloud optical depth []'
+ylab1 = r'$\Delta $ Cloud optical thickness []'
 ylab2 = r'$\Delta r_e$ [$\mu$ m]'
 y_pos = 0
 
@@ -1729,7 +1755,7 @@ for ax_use, y_var in zip(axs,[y_var1, y_var2]):
             continue
         if key in ['UKESM','EC-Earth']:
             ax = ax_use_twin
-            ax.set_xlabel('UKESM', color=cdic_model[key], fontsize=10)  # we already handled the x-label with ax1
+            ax.set_xlabel('UKESM/EC-Earth', color=cdic_model[key], fontsize=10)  # we already handled the x-label with ax1
             ax.tick_params(axis='x', labelcolor=cdic_model[key])
 
         else:
@@ -1765,7 +1791,6 @@ for ax_use, y_var in zip(axs,[y_var1, y_var2]):
             si = df_number.loc[xi]['n_str']
             if key in ['UKESM','EC-Earth']:
                 xi = xi*((xlim[1]-xlim2[0])/(xlim2[1]-xlim2[0]))
-                print('hey')
                 #ax_num_ukesm.text(xi, y_pos, si,
                 #    c = cdic_model[key],
                 #        fontsize=6,
@@ -1805,8 +1830,8 @@ ax_num.set_title(f'Difference between high OA and low OA: {dic_season_nicename[s
 
 #ax_num.set_ylim([0,1])
 
-sns.despine(ax = axs[0])
-sns.despine(ax = axs[1])
+#sns.despine(ax = axs[0])
+#sns.despine(ax = axs[1])
 fn = make_fn(hue_var, y_var1,x_var,comment=f'{y_var2}_diff_median', relplot=True)
 #fig.subplots_adjust(hspace=.5)
 print(fn)
@@ -1841,7 +1866,7 @@ x_var = 'CWP_cut2lm'
 y_var1 = 'COT'
 y_var2 = 'r_eff'
 
-ylab1 = r'$\Delta $ Cloud optical depth []'
+ylab1 = r'$\Delta $ Cloud optical thickness []'
 ylab2 = r'$\Delta r_e$ [$\mu$ m]'
 y_pos1 = .8
 y_pos2 = .8
@@ -2034,7 +2059,7 @@ leg_els = [
 axs[0,0].legend(handles = leg_els, frameon=False)
 
 for ax in axs[:,0]:
-    ax.set_ylabel('Cloud optical depth []')
+    ax.set_ylabel('Cloud optical thickness []')
 for ax in axs[1,:]:
     ax.set_xlabel('CWP [g m$^{-2}$]')
 for ax in axs[0,:]:
@@ -2292,7 +2317,7 @@ plt.show()
 # %%
 x_var = 'CWP_cutlm'
 y_var='COT'
-itterations = 10000
+itterations = 50000
 for key in dic_df.keys():
     
     _df = dic_df[key].copy()

@@ -47,6 +47,25 @@ plt.style.use([
 
 
 # %%
+import scienceplots
+import scienceplots
+plt.style.use([
+    'default',
+    #'science',
+    'acp',
+    #'nature',
+    # 'sp-grid',
+    'no-black',
+    'no-latex',
+    'illustrator-safe'
+])
+
+fonts = {'family':'sans-serif', 'sans-serif': 'DejaVu Sans'}
+
+import matplotlib as mpl
+mpl.rc('font',**fonts)
+
+# %%
 import pandas as pd
 
 

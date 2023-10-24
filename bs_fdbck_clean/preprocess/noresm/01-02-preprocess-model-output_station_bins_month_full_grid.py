@@ -58,7 +58,8 @@ cases_orig = [
     #'OsloAero_intBVOC_pertSizeDist_f19_f19_mg17_full',
     #'OsloAero_intBVOC_f19_f19_mg17_full',
     #'OsloAero_intBVOC_f09_f09_mg17_full',
-    'OsloAero_intBVOC_f09_f09_mg17_ssp245',
+    'OsloAero_intBVOC_pert_f09_f09_mg17_full',
+    #'OsloAero_intBVOC_f09_f09_mg17_ssp245',
     #'OsloAero_intBVOC_f19_f19_mg17_incY_full',
 
 ]

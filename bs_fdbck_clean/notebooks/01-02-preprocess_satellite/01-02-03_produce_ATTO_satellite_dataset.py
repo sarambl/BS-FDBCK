@@ -96,6 +96,13 @@ fl = list(path_out_postproc.glob('*.nc'))
 fl.sort()
 
 # %%
+#fn_ATTO_data = path_measurement_data / 'ACSM_DEFAULT.mat'
+postproc_data = path_measurement_data /'ATTO'/'processed'
+
+path_comb_data_full_time =postproc_data /'ATTO_data_comb_hourly.nc'
+
+
+# %%
 tau_lims = [5,50]
 r_eff_lim = 5
 cloud_top_temp_above = -15 
@@ -199,13 +206,6 @@ import datetime
 # %%
 from bs_fdbck_clean.constants import path_measurement_data
 import pandas as pd
-
-# %%
-#fn_ATTO_data = path_measurement_data / 'ACSM_DEFAULT.mat'
-postproc_data = path_measurement_data /'ATTO'/'processed'
-
-path_comb_data_full_time =postproc_data /'ATTO_data_comb_hourly.nc'
-
 
 # %%
 ds_observations = xr.open_dataset(path_comb_data_full_time).sel(time_traj=0)

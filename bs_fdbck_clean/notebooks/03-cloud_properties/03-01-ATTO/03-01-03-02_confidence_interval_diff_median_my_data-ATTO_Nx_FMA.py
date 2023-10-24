@@ -210,7 +210,7 @@ for ax in axs[-1,:]:
 fig.tight_layout()
 fn = make_fn('annual_distribution', 'props','percentiles', distplot=True)
 print(fn)
-fig.savefig(fn)
+#fig.savefig(fn)
 plt.show()
 
 # %%
@@ -949,7 +949,7 @@ leg_els = [
 ]
 
 ax.legend(handles = leg_els, frameon=False)
-ax.set_xlabel('Cloud optical thickness')
+ax.set_xlabel('Cloud optical thickness []')
 #plt.ylim([0,250])
 print(len(_df))
 sns.despine(fig)
@@ -1190,7 +1190,7 @@ hue_var = 'N100-500'
 hue_var_cat = f'{hue_var}_category'
 hue_labs = [f'{hue_var} low', f'{hue_var} high']
 
-itterations = 1000
+itterations = 50000
 
 
 
@@ -1296,6 +1296,25 @@ dic_season_nicename = {
 # %% [markdown] tags=[]
 # # Final plot: 
 
+# %%
+import scienceplots
+import scienceplots
+plt.style.use([
+    'default',
+    #'science',
+    'acp',
+    #'nature',
+    # 'sp-grid',
+    'no-black',
+    'no-latex',
+    'illustrator-safe'
+])
+
+fonts = {'family':'sans-serif', 'sans-serif': 'DejaVu Sans'}
+
+import matplotlib as mpl
+mpl.rc('font',**fonts)
+
 # %% tags=[]
 figsize = [6,8]
 _palette = palette_OA_2
@@ -1305,6 +1324,9 @@ hue_var = 'N100-500'
 hue_var_cat = f'{hue_var}_category'
 hue_labs = [f'{hue_var} low', f'{hue_var} high']
 
+
+xlim = [25,350]
+xlim2 = [50,700]
 ylim2 =[-3.3,2]# [-4,4]
 markersize= 2
 
@@ -1319,7 +1341,7 @@ x_var = 'CWP_cut2lm'
 y_var1 = 'COT'
 y_var2 = 'r_eff'
 
-ylab1 = r'$\Delta $ Cloud optical depth []'
+ylab1 = r'$\Delta $ Cloud optical thickness []'
 ylab2 = r'$\Delta r_e$ [$\mu$ m]'
 y_pos = 0
 
@@ -1337,7 +1359,7 @@ for ax_use, y_var in zip(axs,[y_var1, y_var2]):
             continue
         if key in ['UKESM','EC-Earth']:
             ax = ax_use_twin
-            ax.set_xlabel('UKESM', color=cdic_model[key], fontsize=10)  # we already handled the x-label with ax1
+            ax.set_xlabel('UKESM/EC-Earth', color=cdic_model[key], fontsize=8)  # we already handled the x-label with ax1
             ax.tick_params(axis='x', labelcolor=cdic_model[key])
 
         else:
@@ -1372,7 +1394,6 @@ for ax_use, y_var in zip(axs,[y_var1, y_var2]):
             si = df_number.loc[xi]['n_str']
             if key in ['UKESM','EC-Earth']:
                 xi = xi*((ax_use.get_xlim()[1]-ax_use.get_xlim()[0])/(ax.get_xlim()[1]-ax.get_xlim()[0]))
-                print('hey')
                 #ax_num_ukesm.text(xi, y_pos, si,
                 #    c = cdic_model[key],
                 #        fontsize=6,
@@ -1400,14 +1421,14 @@ for ax in axs:
     
 axs[0].set_ylabel(ylab1)
 axs[1].set_ylabel(ylab2)
-axs[1].set_ylim(ylim2)
-axs[1].set_xlim([50,350])
+axs[1].set_xlim(xlim)
+ax_use_twin.set_xlim(xlim2)
 
 axs[1].set_xlabel('CWP [g m$^{-2}$]')
 
-ax.legend(frameon=False, loc='upper left')
+ax.legend(frameon=False, loc='lower right')
 ax_use_twin.legend(frameon=False)
-
+ax_use_twin.tick_params(labelsize=8)
 ax_num.set_title(f'Difference between high {hue_var} and low {hue_var}: {dic_season_nicename[season]}')
 
 #ax_num.set_ylim([0,1])
@@ -1432,7 +1453,7 @@ hue_var = 'N50-500'
 hue_var_cat = f'{hue_var}_category'
 hue_labs = [f'{hue_var} low', f'{hue_var} high']
 
-itterations =1000
+itterations =50000
 
 
 
@@ -1446,7 +1467,6 @@ dic_median_CI = dict()
 for ax, y_var in zip(axs,[y_var1, y_var2]):
     dic_median_CI[y_var] = dict()
     for key in dic_df.keys():
-        print(key)
         if (key in ['EC-Earth', 'UKESM']) and (y_var=='COT'):
             continue
         _df = dic_df[key].copy()
@@ -1547,6 +1567,8 @@ hue_var = 'N50-500'
 hue_var_cat = f'{hue_var}_category'
 hue_labs = [f'{hue_var} low', f'{hue_var} high']
 
+xlim = [25,350]
+xlim2 = [50,700]
 ylim2 =[-3.3,2]# [-4,4]
 markersize= 2
 
@@ -1561,7 +1583,7 @@ x_var = 'CWP_cut2lm'
 y_var1 = 'COT'
 y_var2 = 'r_eff'
 
-ylab1 = r'$\Delta $ Cloud optical depth []'
+ylab1 = r'$\Delta $ Cloud optical thickness []'
 ylab2 = r'$\Delta r_e$ [$\mu$ m]'
 y_pos = 0
 
@@ -1579,7 +1601,7 @@ for ax_use, y_var in zip(axs,[y_var1, y_var2]):
             continue
         if key in ['UKESM','EC-Earth']:
             ax = ax_use_twin
-            ax.set_xlabel('UKESM', color=cdic_model[key], fontsize=10)  # we already handled the x-label with ax1
+            ax.set_xlabel('UKESM/EC-Earth', color=cdic_model[key], fontsize=8)  # we already handled the x-label with ax1
             ax.tick_params(axis='x', labelcolor=cdic_model[key])
 
         else:
@@ -1643,12 +1665,14 @@ for ax in axs:
 axs[0].set_ylabel(ylab1)
 axs[1].set_ylabel(ylab2)
 axs[1].set_ylim(ylim2)
-axs[1].set_xlim([50,350])
+axs[1].set_xlim(xlim)
+ax_use_twin.set_xlim(xlim2)
 
 axs[1].set_xlabel('CWP [g m$^{-2}$]')
 
 ax.legend(frameon=False, loc='upper left')
 ax_use_twin.legend(frameon=False)
+ax_use_twin.tick_params(labelsize=8)
 
 ax_num.set_title(f'Difference between high {hue_var} and low {hue_var}: {dic_season_nicename[season]}')
 
@@ -1673,7 +1697,7 @@ hue_var = 'N200-500'
 hue_var_cat = f'{hue_var}_category'
 hue_labs = [f'{hue_var} low', f'{hue_var} high']
 
-itterations =1000
+itterations =50000
 
 
 
@@ -1788,6 +1812,8 @@ hue_var = 'N200-500'
 hue_var_cat = f'{hue_var}_category'
 hue_labs = [f'{hue_var} low', f'{hue_var} high']
 
+xlim = [25,350]
+xlim2 = [50,700]
 ylim2 =[-3.3,2]# [-4,4]
 markersize= 2
 
@@ -1802,7 +1828,7 @@ x_var = 'CWP_cut2lm'
 y_var1 = 'COT'
 y_var2 = 'r_eff'
 
-ylab1 = r'$\Delta $ Cloud optical depth []'
+ylab1 = r'$\Delta $ Cloud optical thickness []'
 ylab2 = r'$\Delta r_e$ [$\mu$ m]'
 y_pos = 0
 
@@ -1820,7 +1846,7 @@ for ax_use, y_var in zip(axs,[y_var1, y_var2]):
             continue
         if key in ['UKESM','EC-Earth']:
             ax = ax_use_twin
-            ax.set_xlabel('UKESM', color=cdic_model[key], fontsize=10)  # we already handled the x-label with ax1
+            ax.set_xlabel('UKESM/EC-Earth', color=cdic_model[key], fontsize=8)  # we already handled the x-label with ax1
             ax.tick_params(axis='x', labelcolor=cdic_model[key])
 
         else:
@@ -1884,12 +1910,14 @@ for ax in axs:
 axs[0].set_ylabel(ylab1)
 axs[1].set_ylabel(ylab2)
 axs[1].set_ylim(ylim2)
-axs[1].set_xlim([50,350])
+axs[1].set_xlim(xlim)
+ax_use_twin.set_xlim(xlim2)
 
 axs[1].set_xlabel('CWP [g m$^{-2}$]')
 
 ax.legend(frameon=False, loc='upper left')
 ax_use_twin.legend(frameon=False)
+ax_use_twin.tick_params(labelsize=8)
 
 ax_num.set_title(f'Difference between high {hue_var} and low {hue_var}: {dic_season_nicename[season]}')
 
@@ -1940,129 +1968,6 @@ for source in dic_median_CI[v].keys():
     _df_both.to_csv(fn)
 
 
-
-# %% [markdown]
-# # Final plot:
-
-# %% tags=[]
-figsize = [6,8]
-_palette = palette_OA_2
-ylim = None#[0,25]
-alpha_err=0.4
-
-hue_var = 'N200'
-hue_var_cat = f'{hue_var}_category'
-hue_labs = [f'{hue_var} low', f'{hue_var} high']
-
-ylim2 =None# [-4,4]
-markersize= 2
-
-fig, axs_all = plt.subplots(4,1,figsize=figsize, sharey='row', sharex='col', dpi=200,
-                            gridspec_kw={'height_ratios': [1, 7, 1,7]})
-
-ax_num =axs_all[0]
-ax_num2 = axs_all[2]
-axs = axs_all[[1,3]]
-
-x_var = 'CWP_cut2lm'
-
-y_var1 = 'COT'
-y_var2 = 'r_eff'
-
-ylab1 = r'$\Delta $ Cloud optical depth []'
-ylab2 = r'$\Delta r_e$ [$\mu$ m]'
-y_pos1 = .8
-y_pos2 = .8
-
-models_and_obs = list(dic_df.keys())
-ax = axs[0]
-for ax, y_var in zip(axs,[y_var1, y_var2]):
-    
-    
-    for key in models_and_obs:
-        if (key in ['EC-Earth', 'UKESM']) and (y_var =='COT'):
-            continue
-        diff_med = dic_median_CI[y_var][key]['sample_median']
-        df_sample_quant = dic_median_CI[y_var][key]['bootstrap_quant']
-        df_number = dic_median_CI[y_var][key]['number']
-
-        df_bootstrap_med = df_sample_quant.loc[0.5]
-        plt_med = diff_med[y_var]
-        label = key
-        #if key=='EC-Earth':
-        #    label = f'{key}, 0.5CWP'
-        ax.scatter(plt_med.index, plt_med, ec=cdic_model[key],lw=2, label=label,s=50,fc='none')
-        ax.plot(plt_med.index, plt_med, c=cdic_model[key],lw=1, label='__nolegend__',zorder=-20,
-               alpha=.2)
-        #ax.scatter(df_bootstrap_med.index, df_bootstrap_med, c=cdic_model[key], label=key,s=200, marker='x')
-
-        df_sample_quant_CI= df_sample_quant.drop(labels=0.5).T
-        yerr = np.abs(df_sample_quant_CI.T - plt_med)
-        
-        ax.errorbar(plt_med.index, plt_med, yerr=yerr.values, 
-                    #capsize=5,capthick=2,
-                    c=cdic_model[key], linewidth=0, elinewidth=3, alpha=alpha_err,zorder=0)
-        
-        if y_var !=y_var2:
-            continue
-        df_number['n_str'] = df_number['n_low'].astype(str) + '/' + df_number['n_high'].astype(str) 
-        #ax.text(df_numb.index, 
-        if key in ['NorESM','ECHAM-SALSA', 'Observations']:
-            _ax_num = ax_num
-            y_pos1 -=.44
-            y_pos = y_pos1
-        else:
-            _ax_num = ax_num2
-            y_pos2 -=.44
-            y_pos = y_pos2
-        for xi in df_number.index:
-            si = df_number.loc[xi]['n_str']
-            si = '/\n'.join(si.split('/'))
-
-            _ax_num.text(xi, y_pos, si,
-                    c = cdic_model[key],
-                        fontsize=6,
-                    horizontalalignment='center',
-                        alpha=.7,
-                        zorder=1000000,
-                   )
-        #if key == models_and_obs[2]:
-        #    y_pos = 0
-        #else:
-        y_pos -=.44
-for _ax in [ax_num, ax_num2]:
-    _ax.xaxis.set_visible(False)
-    _ax.yaxis.set_visible(False)
-    sns.despine(ax=_ax,right=True, left = True, bottom=True, top=True)
-for ax in axs:
-    ax.axhline(0, c='.5',zorder=-10,lw=1, linestyle='--')
-    
-axs[0].set_ylabel(ylab1)
-axs[1].set_ylabel(ylab2)
-axs[1].set_ylim(ylim2)
-
-axs[1].set_xlabel('CWP [g m$^{-2}$]')
-
-ax.legend(frameon=False)
-
-ax_num.set_title(f'Difference between high {hue_var} and low {hue_var}: {dic_season_nicename[season]}')
-
-#ax_num.set_ylim([0,1])
-
-sns.despine(ax = axs[0])
-sns.despine(ax = axs[1])
-fn = make_fn(hue_var, y_var1,x_var,comment=f'{y_var2}_diff_median_full', relplot=True)
-print(fn) 
-#for ax in axs:
-#    ax.set_xlim([50,450])
-
-#fig.savefig(fn, dpi=150)
-#fig.tight_layout()
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-plt.show()
-
-### Grid box avg
 
 # %% [markdown] tags=[]
 # ## Supplementary plots
@@ -2162,7 +2067,7 @@ leg_els = [
 axs[0,0].legend(handles = leg_els, frameon=False)
 
 for ax in axs[:,0]:
-    ax.set_ylabel('Cloud optical depth []')
+    ax.set_ylabel('Cloud optical thickness []')
 for ax in axs[1,:]:
     ax.set_xlabel('CWP [g m$^{-2}$]')
 for ax in axs[0,:]:
@@ -2420,7 +2325,7 @@ plt.show()
 # %%
 x_var = 'CWP_cutlm'
 y_var='COT'
-itterations = 10000
+itterations = 50000
 for key in dic_df.keys():
     
     _df = dic_df[key].copy()

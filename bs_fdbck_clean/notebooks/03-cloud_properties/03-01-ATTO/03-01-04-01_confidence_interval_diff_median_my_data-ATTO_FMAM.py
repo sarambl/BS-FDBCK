@@ -204,7 +204,7 @@ for ax in axs[-1,:]:
 fig.tight_layout()
 fn = make_fn('annual_distribution', 'props','percentiles', distplot=True)
 print(fn)
-fig.savefig(fn)
+#fig.savefig(fn)
 plt.show()
 
 # %%
@@ -877,7 +877,7 @@ leg_els = [
 ]
 
 ax.legend(handles = leg_els, frameon=False)
-ax.set_xlabel('Cloud optical thickness')
+ax.set_xlabel('Cloud optical thickness []')
 #plt.ylim([0,250])
 print(len(_df))
 sns.despine(fig)
@@ -1692,7 +1692,7 @@ x_var = 'CWP_cut2lm'
 y_var1 = 'COT'
 y_var2 = 'r_eff'
 
-ylab1 = r'$\Delta $ Cloud optical depth []'
+ylab1 = r'$\Delta $ Cloud optical thickness []'
 ylab2 = r'$\Delta r_e$ [$\mu$ m]'
 y_pos = 0
 
@@ -1824,7 +1824,7 @@ x_var = 'CWP_cut2lm'
 y_var1 = 'COT'
 y_var2 = 'r_eff'
 
-ylab1 = r'$\Delta $ Cloud optical depth []'
+ylab1 = r'$\Delta $ Cloud optical thickness []'
 ylab2 = r'$\Delta r_e$ [$\mu$ m]'
 y_pos1 = .8
 y_pos2 = .8
@@ -2017,7 +2017,7 @@ leg_els = [
 axs[0,0].legend(handles = leg_els, frameon=False)
 
 for ax in axs[:,0]:
-    ax.set_ylabel('Cloud optical depth []')
+    ax.set_ylabel('Cloud optical thickness []')
 for ax in axs[1,:]:
     ax.set_xlabel('CWP [g m$^{-2}$]')
 for ax in axs[0,:]:
@@ -2275,7 +2275,7 @@ plt.show()
 # %%
 x_var = 'CWP_cutlm'
 y_var='COT'
-itterations = 10000
+itterations = 50000
 for key in dic_df.keys():
     
     _df = dic_df[key].copy()
