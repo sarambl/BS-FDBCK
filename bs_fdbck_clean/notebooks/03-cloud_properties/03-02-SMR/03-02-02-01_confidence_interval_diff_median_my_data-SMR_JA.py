@@ -323,17 +323,23 @@ str_coordlims = f'{str_lonlim}_{str_latlim}'
 
 # %%
 case_name_noresm = 'OsloAero_intBVOC_f09_f09_mg17_fssp245'
+model_name_noresm = 'NorESM'
+
 
 
 # %% [markdown]
-# #### Input files created in [02-create_file-long_sum.ipynb](02-create_file-long_sum)
+# #### Input files created in [03-02-01-create_file.ipynb](03-02-01-create_file.ipynb)
 
 # %% [markdown] tags=[]
 # #### Input files
 
 # %%
-fn_noresm = path_extract_latlon_outdata/ case_name_noresm/f'{case_name_noresm}.h1._{from_time1}-{to_time2}_concat_subs_{str_coordlims}_lev1_final.nc'
-fn_noresm_csv = path_extract_latlon_outdata/ case_name_noresm/f'{case_name_noresm}.h1._{from_time1}-{to_time2}_concat_subs_{str_coordlims}_lev1_finalALL_year.csv'
+input_path_noresm = path_extract_latlon_outdata / model_name_noresm / case_name_noresm 
+
+# %%
+fn_noresm     = input_path_noresm / f'{case_name_noresm}.h1._{from_time1}-{to_time2}_concat_subs_{str_coordlims}_lev1_final.nc'
+fn_noresm_csv = input_path_noresm / f'{case_name_noresm}.h1._{from_time1}-{to_time2}_concat_subs_{str_coordlims}_lev1_finalALL_year.csv'
+
 
 # %%
 
@@ -418,7 +424,6 @@ cases_ec_earth = [case_name_ec_earth]
 # ### UKESM
 
 # %%
-
 case_name = 'AEROCOMTRAJ'
 case_name_ukesm = 'AEROCOMTRAJ'
 time_res = 'hour'
@@ -463,7 +468,6 @@ df_mod_echam = pd.read_csv(fn_final_echam_csv, index_col=[0,1,2], parse_dates=[0
 df_mod_echam['month'] =df_mod_echam.index.get_level_values(0).month
 df_mod_ec_earth = pd.read_csv(fn_final_ec_earth_csv, index_col=[0,1,2], parse_dates=[0] )
 df_mod_ec_earth['month'] =df_mod_ec_earth.index.get_level_values(0).month
-
 df_mod_ukesm = pd.read_csv(fn_final_ukesm_csv, index_col=[0,1,2], parse_dates=[0] )
 df_mod_ukesm['month'] =df_mod_ukesm.index.get_level_values(0).month
 
@@ -492,6 +496,7 @@ df_mod_echam['month']
 df_mod_noresm = df_mod_noresm[df_mod_noresm['month'].isin(season2month[season])]
 df_mod_echam = df_mod_echam[df_mod_echam['month'].isin(season2month[season])]
 df_mod_ec_earth = df_mod_ec_earth[df_mod_ec_earth['month'].isin(season2month[season])]
+df_mod_ukesm = df_mod_ukesm[df_mod_ukesm['month'].isin(season2month[season])]
 
 # %% [markdown]
 # ### Organize data in dictionary
@@ -807,7 +812,7 @@ leg_els = [
 ]
 
 ax.legend(handles = leg_els, frameon=False)
-ax.set_xlabel('Cloud optical thickness')
+ax.set_xlabel('Cloud optical thickness []')
 #plt.ylim([0,250])
 print(len(_df))
 sns.despine(fig)
@@ -1107,7 +1112,7 @@ def bootstrap_return_quantiles(_df_low,_df_high,
 hue_labs = ['OA low', 'OA high']
 hue_var = 'OA_category'
 
-itterations = 1000
+itterations = 50000
 
 
 
@@ -1233,7 +1238,8 @@ x_var = 'CWP_cut2lm'
 y_var1 = 'COT'
 y_var2 = 'r_eff'
 
-ylab1 = r'$\Delta $ Cloud optical depth []'
+
+ylab1 = r'$\Delta $ Cloud optical thickness  []'
 ylab2 = r'$\Delta r_e$ [$\mu$ m]'
 y_pos = 0
 
@@ -1412,7 +1418,7 @@ leg_els = [
 axs[0,0].legend(handles = leg_els, frameon=False)
 
 for ax in axs[:,0]:
-    ax.set_ylabel('Cloud optical depth []')
+    ax.set_ylabel('Cloud optical thickness []')
 for ax in axs[1,:]:
     ax.set_xlabel('CWP [g m$^{-2}$]')
 for ax in axs[0,:]:
@@ -1672,7 +1678,7 @@ plt.show()
 # %%
 x_var = 'CWP_cutlm'
 y_var='COT'
-itterations = 10000
+itterations = 50000
 for key in dic_df.keys():
     
     _df = dic_df[key].copy()

@@ -145,7 +145,7 @@ def extract_subset(case_name='OsloAero_intBVOC_f19_f19_mg17_full', from_time='20
     print(lon_lims)
     lon_lims = [convert_lon_to_360(lon_lims[0]), convert_lon_to_360(lon_lims[1])]
     if out_folder is None:
-        out_folder = Path(path_extract_latlon_outdata) / case_name
+        out_folder = Path(path_extract_latlon_outdata) /'NorESM' / case_name
     if tmp_folder is None:
         tmp_folder = out_folder / 'tmp'
 

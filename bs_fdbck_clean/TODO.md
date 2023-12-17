@@ -7,3 +7,6 @@
 - Make new branch
 - Delete excess figures and cells. 
 - Make download data section appropriate
+- Make clear which data is where
+- Make clear how to pre-process the data with ebas. 
+- 

@@ -15,7 +15,7 @@ from bs_fdbck_clean.util.imports.fix_xa_dataset_v2 import xr_fix
 from bs_fdbck_clean.constants import latlon_path
 
 xr.set_options(keep_attrs=True)
-
+# %%
 
 def xr_import_NorESM(case, varlist, from_time, to_time, path=constants.get_input_datapath(),
                      model='NorESM', history_fld='.h0.', comp='atm', chunks=None):
@@ -32,6 +32,7 @@ def xr_import_NorESM(case, varlist, from_time, to_time, path=constants.get_input
     :param comp: e.g 'atm', 'lnd' etc
     :return: xr.Dataset
     """
+
 
     # depricated kind of: if wish to use alternative name
     casename_nice = get_nice_name_case(  case)

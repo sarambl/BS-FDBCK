@@ -14,7 +14,10 @@
 # ---
 
 # %% [markdown]
-# ## OA and sizedistribution plots: ATTO station
+# # Temperature to OA and OA to Nx plots: ATTO station
+
+# %% [markdown]
+# ### Import and settings
 
 # %%
 # %load_ext autoreload
@@ -31,20 +34,12 @@ log.ger.setLevel(log.log.INFO)
 import time
 import xarray as xr
 import matplotlib.pyplot as plt
+import numpy as np
 
-# %%
-import scienceplots
-import scienceplots
-plt.style.use([
-    'default',
-    # 'science',
-    'acp',
-    # 'sp-grid',
-    'no-black',
-    'no-latex',
-    'illustrator-safe'
-])
+import pandas as pd
+import matplotlib as mpl
 
+from bs_fdbck_clean.constants import path_measurement_data
 
 # %%
 import scienceplots
@@ -62,48 +57,32 @@ plt.style.use([
 
 fonts = {'family':'sans-serif', 'sans-serif': 'DejaVu Sans'}
 
-import matplotlib as mpl
 mpl.rc('font',**fonts)
 
-# %%
-import pandas as pd
-
-
-# %%
-from bs_fdbck_clean.constants import path_measurement_data
-
 # %% [markdown]
-# ## Time resolution sources:
+# ## Set settings:
 #
-
-# %%
-
-import numpy as np
-
-
 
 # %%
 
 select_station = 'ATTO'
 model_lev_i = -2
 
-# %%
+# %% pycharm={"name": "#%% \n"}
 plot_path = Path(f'Plots/{select_station}')
 
-
-# %% pycharm={"name": "#%% \n"}
 def make_fn_scat(case, v_x, v_y):
     _x = v_x.split('(')[0]
     _y = v_y.split('(')[0]
     f = f'scat_all_years_echam_noresm_{case}_{_x}_{_y}-ATTO_ukesm_lev{model_lev_i}.png'
     return plot_path /f
 
-
-# %%
 plot_path.mkdir(exist_ok=True, parents=True)
 
-# %%
 plot_path
+
+# %% [markdown]
+# #### Paths to read data from:
 
 # %%
 from bs_fdbck_clean.constants import path_measurement_data
@@ -115,21 +94,10 @@ postproc_data_obs = path_measurement_data /select_station/'processed'
 fn_obs_comb_data_full_time =postproc_data_obs /'ATTO_data_comb_hourly.nc'
 
 # %% [markdown]
-# # Load observational data: 
-
-# %%
-postproc_data_obs = path_measurement_data /'ATTO'/'processed'
-
-# %%
-
-
-ds_ATTO = xr.open_dataset(fn_obs_comb_data_full_time)
-
-# %%
-fn_obs_comb_data_full_time
+# ## Read observational data: 
 
 # %% [markdown] tags=[]
-# # Read in model data:
+# ## Read in model data:
 
 # %%
 models = ['ECHAM-SALSA','NorESM', 'EC-Earth', 'UKESM']
@@ -179,7 +147,7 @@ varl = ['Pressure_reanalysis', 'Potential_Temperature_reanalysis', 'Temperature_
         #'wind_speed_v',
         'OA'
 ]
-ds_ATTO[varl].squeeze().to_dataframe()
+ds_ATTO[varl].squeeze().to_dataframe().head()
 
 # %%
 dic_df_pre['Observations'] = dict()
@@ -249,7 +217,7 @@ for mod in models:
         dic_df_mod_case[mod][ca] = _df
 
 # %% [markdown] tags=[]
-# # Merge with observations:
+# ## Merge with observations
 
 # %%
 dic_df_pre = dict()#dic_df_mod_case.copy()#deep=True)
@@ -260,28 +228,31 @@ for mod in dic_df_mod_case.keys():
 vars_obs = ['OA', 'N100-500','N50-500','N200-500','temperature']
 
 # %%
-ds_ATTO
-
-# %%
 df_ATTO = ds_ATTO[vars_obs].drop('time_traj').to_dataframe()
 
 df_ATTO['some_obs_missing'] = df_ATTO.isnull().any(axis=1)
 
 # %%
-df_for_merge = df_ATTO[['OA','N100-500', 'some_obs_missing']].rename({'OA':'obs_OA','N100-500':'obs_N100-500',},axis=1)
+df_for_merge = (df_ATTO[['OA','N100-500', 'some_obs_missing']]
+                .rename({'OA':'obs_OA','N100-500':'obs_N100-500',},axis=1)
+               )
 
 # %%
 for mod in dic_df_mod_case.keys():
     print(mod)
     for ca in dic_df_mod_case[mod].keys():
-        dic_df_mod_case[mod][ca] = pd.merge(dic_df_pre[mod][ca], df_for_merge ,right_on='time', left_on='time', how='outer')
+        dic_df_mod_case[mod][ca] = pd.merge(dic_df_pre[mod][ca], 
+                                            df_for_merge ,
+                                            right_on='time', 
+                                            left_on='time', 
+                                            how='outer')
         dic_df_mod_case[mod][ca]['year'] = dic_df_mod_case[mod][ca].index.year
 
 # %%
 df_ATTO_obs_rename = df_ATTO.rename({'Org':'OA','temperature':'T_C'}, axis=1)
 
 # %%
-df_ATTO_obs_rename
+df_ATTO_obs_rename.head()
 
 # %% [markdown]
 # ## Add observations to dictionary
@@ -332,6 +303,9 @@ mask_obs_OA = dic_df_mod_case[mod][ca]['obs_OA'].notnull()
 # %% [markdown]
 # ## Compute daily medians:
 
+# %% [markdown]
+# Save daily medians for usage in next notebook. 
+
 # %%
 path_save_daily_medians = Path(f'Temp_data/{select_station}_daily_medians')
 path_save_daily_medians.parent.mkdir(exist_ok=True)
@@ -340,25 +314,33 @@ path_save_daily_medians.parent.mkdir(exist_ok=True)
 path_save_daily_medians
 
 # %% [markdown]
-# ### Remove values where fewer than x values
+# ## Preprocess data: remove days with few datapoints
 
 # %%
-minimal_number_per_day = 20
+minimal_number_per_day = 16
 obs_per_day =  dic_df_mod_case['Observations']['Observations'].resample('D').count()['OA']
 obs_per_day
+
+# %%
+print(f'Datapoints with limit: {(obs_per_day>minimal_number_per_day).sum()},'
+      f'datapoints without:{(obs_per_day>1).sum()}')
+
+
+# %%
+(obs_per_day>1).sum()
 
 # %%
 _df = dic_df_mod_case['UKESM']['AEROCOMTRAJ']
 _df_m = _df.resample('d').median()
 _df_m['obs_per_day'] = obs_per_day
 
-# %%
 _df_m['obs_per_day'].plot()
 
 _df_c = _df[_df['some_obs_missing']==False].resample('d').count()['OA']
 _df_c.plot()
 
-# %%
+# %% [markdown]
+# #### Write to file: 
 
 # %%
 dic_df_med = dict()
@@ -377,9 +359,10 @@ for mo in dic_df_mod_case.keys():
         _df_med = _df.resample('D').median()
         _df_med['obs_per_day'] = obs_per_day
         #_df_count = _df.resample('D').count()['OA']
-        dic_df_med[use_name] = _df_med[_df_med['obs_per_day']>minimal_number_per_day]
+        dic_df_med[use_name] = _df_med.copy()[_df_med['obs_per_day']>minimal_number_per_day]
         fp = path_save_daily_medians.parent / f'{path_save_daily_medians.name}_{use_name}.csv'
         dic_df_med[use_name].to_csv(fp)
+        print(fp)
 
 
 # %%
@@ -412,65 +395,11 @@ def select_months(df, season = None, month_list=None):
 # %%
 from bs_fdbck_clean.util.plot.BSOA_plots import cdic_model
 
-# %%
-season = 'FMA'
-mo ='ECHAM-SALSA'
-df_s2 =  dic_df_med[mo]
-print(mo)
-mask_months = select_months(df_s2, season=season)
-df_s2 = df_s2[mask_months].copy()
-print(len(df_s2.dropna()))
-
-df_s2.plot.scatter(x='OA',y='N50-500')
-plt.show()
-fi, ax = plt.subplots()
-df_s2['OA'].plot(marker='.',linewidth=0)
-
-season = 'FMA'
-mo ='NorESM'
-df_s1 =  dic_df_med[mo]
-print(mo)
-mask_months = select_months(df_s1, season=season)
-df_s1 = df_s1[mask_months].copy()
-print(len(df_s1.dropna()))
-df_s1['OA'].plot(marker='.', linewidth=0, ax=ax.twinx(), c='r')
-
-
-# %%
-season = 'FMA'
-mo ='ECHAM-SALSA'
-df_s2 =  dic_df_med[mo]
-print(mo)
-mask_months = select_months(df_s2, season=season)
-df_s2 = df_s2[mask_months].copy()
-print(len(df_s2.dropna()))
-
-df_s2.plot.scatter(x='OA',y='N50-500')
-plt.show()
-fi, ax = plt.subplots()
-df_s2['N50-500'].plot(marker='.',linewidth=0)
-
-season = 'FMA'
-mo ='NorESM'
-df_s1 =  dic_df_med[mo]
-print(mo)
-mask_months = select_months(df_s1, season=season)
-df_s1 = df_s1[mask_months].copy()
-print(len(df_s1.dropna()))
-df_s1['N50-500'].plot(marker='.', linewidth=0, ax=ax.twinx(), c='r')
-
-
 # %% [markdown]
-# # PLOTS
-
-# %%
-models
+# ## Functions for plotting
 
 # %%
 models_and_obs =  models + ['Observations'] 
-
-# %% [markdown]
-# ## T to OA
 
 # %%
 label_dic =dict(
@@ -564,27 +493,11 @@ def make_cool_grid5(figsize=None,
     return fig, ax, daxs, axs_extra
 
 
-fig, ax, daxs, axs_extra = make_cool_grid5(#ncols_extra=1, nrows_extra=1
-                                           )# w_ratio_sideplot=.5)
-#for ax_e in axs_extra:
-#    ax_e.set_xlabel('')
-#    ax_e.set_ylabel('')
-#    ax_e.set_ylim(ax.get_ylim())
-#    ax_e.set_xlim(ax.get_xlim())
-#    ax_e.axes.xaxis.set_ticklabels([])
-#    ax_e.axes.yaxis.set_ticklabels([])
-
-#    sns.despine(ax = ax_e)
 
 
 
 # %%
-#parameters, cov= curve_fit(f, x, y)
 
-#model = scipy.odr.odrpack.Model(f_wrapper_for_odr)
-#data = scipy.odr.odrpack.Data(x,y)
-#myodr = scipy.odr.odrpack.ODR(data, model, beta0=parameters,  maxit=0)
-#myodr.set_job(fit_type=2)
 def compute_p_value(df_s, out, popt):
     parameters = popt
     parameterStatistics = out#myodr.run()    
@@ -610,7 +523,7 @@ def compute_p_value(df_s, out, popt):
 
 
 # %% [markdown]
-# ## Make plot
+# #### Make T to OA plot
 
 # %%
 def make_plot(v_x, v_y, xlims, ylims, season, 
@@ -776,7 +689,7 @@ def make_scatter_plot(v_x, v_y, xlims, ylims, season,
 #### WET_mid
 
 # %% [markdown]
-# ## T to OA, exp
+# ### Fit: T to OA, exp
 
 # %%
 def get_lin_log_fit(df_s, v_x, v_y, fit_func = 'exp', return_func=True, beta0=[0.01,.12]):
@@ -800,7 +713,7 @@ def get_lin_log_fit(df_s, v_x, v_y, fit_func = 'exp', return_func=True, beta0=[0
 
 
 # %% [markdown]
-# # Compare seasons
+# ## T to OA: Various seasons
 
 # %% [markdown] tags=[]
 # ### FMA
@@ -1707,146 +1620,6 @@ fig.savefig(fn.with_suffix('.pdf'), dpi=150)
 
 plt.show()
 
-# %% [markdown]
-# ### WET
-
-# %%
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-xlab = r'T  [$^\circ$C]'
-ylab = r'OA [$\mu g m^{-3}$]'
-
-
-
-xlims = [22,40]
-ylims = [.1,35]
-
-
-season='WET_old'
-v_x = 'T_C'
-v_y = 'OA'
-
-
-make_plot(v_x, v_y, xlims, ylims, season, 
-              xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale='log',
-         
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    popt, pov, label, func = get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'exp', return_func=True, beta0=[0.01,.12])
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim)
-    
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )
-    ax_ex.set_yscale('log')
-ax.set_yscale('log')
-ax.set_xticks(np.arange(20,41,5))
-ax.grid(color='grey', linewidth=.5, linestyle=':')
-
-for ax_ex in axs_extra.flatten():
-    ax_ex.set_yticklabels([])
-    ax_ex.set_xticks(np.arange(20,41,5))
-    ax_ex.grid(color='grey', linewidth=.5, linestyle=':')
-
-
-    
-fn = make_fn_scat(f'exp1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-
-
-plt.show()
-
-# %% [markdown]
-# ### WET_mid
-
-# %%
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-xlab = r'T  [$^\circ$C]'
-ylab = r'OA [$\mu g m^{-3}$]'
-
-
-
-xlims = [22,40]
-ylims = [.1,35]
-
-
-season='WET_mid'
-v_x = 'T_C'
-v_y = 'OA'
-
-
-make_plot(v_x, v_y, xlims, ylims, season, 
-              xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale='log',
-         
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    popt, pov, label, func = get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'exp', return_func=True, beta0=[0.01,.12])
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim)
-    
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )
-    ax_ex.set_yscale('log')
-ax.set_yscale('log')
-ax.set_xticks(np.arange(20,41,5))
-ax.grid(color='grey', linewidth=.5, linestyle=':')
-
-for ax_ex in axs_extra.flatten():
-    ax_ex.set_yticklabels([])
-    ax_ex.set_xticks(np.arange(20,41,5))
-    ax_ex.grid(color='grey', linewidth=.5, linestyle=':')
-
-
-    
-fn = make_fn_scat(f'exp1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-
-
-plt.show()
-
 # %% [markdown] tags=[]
 # ### SON
 
@@ -1920,506 +1693,11 @@ plt.show()
 # %% [markdown]
 # ### MAM
 
-# %%
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-xlab = r'T  [$^\circ$C]'
-ylab = r'OA [$\mu g m^{-3}$]'
-
-
-
-xlims = [22,40]
-ylims = [.1,35]
-
-
-season='MAM'
-v_x = 'T_C'
-v_y = 'OA'
-
-
-make_plot(v_x, v_y, xlims, ylims, season, 
-              xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale='linear',
-         
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    popt, pov, label, func = get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'exp', return_func=True, beta0=[0.01,.12])
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim)
-    
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )
-    ax_ex.set_yscale('log')
-ax.set_yscale('log')
-
-
-    
-fn = make_fn_scat(f'exp1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-
-
-plt.show()
-
 # %% [markdown]
 # ### JJA
 
-# %%
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-xlab = r'T  [$^\circ$C]'
-ylab = r'OA [$\mu g m^{-3}$]'
-
-
-
-xlims = [22,40]
-ylims = [.1,35]
-
-
-season='JJA'
-v_x = 'T_C'
-v_y = 'OA'
-
-
-make_plot(v_x, v_y, xlims, ylims, season, 
-              xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale='linear',
-         
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    popt, pov, label, func = get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'exp', return_func=True, beta0=[0.01,.12])
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim)
-    
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )
-    ax_ex.set_yscale('log')
-ax.set_yscale('log')
-
-
-    
-fn = make_fn_scat(f'exp1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-
-
-plt.show()
-
 # %% [markdown]
-# ### JF
-
-# %%
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-xlab = r'T  [$^\circ$C]'
-ylab = r'OA [$\mu g m^{-3}$]'
-
-
-
-xlims = [22,40]
-ylims = [.1,35]
-
-
-season='JF'
-v_x = 'T_C'
-v_y = 'OA'
-
-
-make_plot(v_x, v_y, xlims, ylims, season, 
-              xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale='linear',
-         
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    popt, pov, label, func = get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'exp', return_func=True, beta0=[0.01,.12])
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim)
-    
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )
-    ax_ex.set_yscale('log')
-ax.set_yscale('log')
-
-
-    
-fn = make_fn_scat(f'exp1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-
-
-plt.show()
-
-# %% [markdown]
-# ### WET_mid
-
-# %%
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-xlab = r'T  [$^\circ$C]'
-ylab = r'OA [$\mu g m^{-3}$]'
-
-
-
-xlims = [22,35]
-ylims = [.1,30]
-
-
-season='WET_mid'
-v_x = 'T_C'
-v_y = 'OA'
-
-
-make_plot(v_x, v_y, xlims, ylims, season, 
-              xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale='linear',
-         
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    popt, pov, label, func = get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'exp', return_func=True, beta0=[0.01,.12])
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim)
-    
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )
-    ax_ex.set_yscale('log')
-ax.set_yscale('log')
-
-
-    
-fn = make_fn_scat(f'exp1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-
-
-plt.show()
-
-# %% [markdown]
-# ### WET
-
-# %%
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-xlab = r'T  [$^\circ$C]'
-ylab = r'OA [$\mu g m^{-3}$]'
-
-
-
-xlims = [22,40]
-ylims = [.1,30]
-
-
-season='WET'
-v_x = 'T_C'
-v_y = 'OA'
-
-
-make_plot(v_x, v_y, xlims, ylims, season, 
-              xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale='linear',#xscale='log'
-         
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    popt, pov, label, func = get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'exp', return_func=True, beta0=[0.01,.12])
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim)
-    
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )
-    ax_ex.set_yscale('log')
-ax.set_yscale('log')
-
-
-    
-fn = make_fn_scat(f'exp1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-
-
-plt.show()
-
-# %% [markdown]
-# ### WET_early
-
-# %%
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-xlab = r'T  [$^\circ$C]'
-ylab = r'OA [$\mu g m^{-3}$]'
-
-
-
-xlims = [22,40]
-ylims = [.1,30]
-
-
-season='WET_early'
-v_x = 'T_C'
-v_y = 'OA'
-
-
-make_plot(v_x, v_y, xlims, ylims, season, 
-              xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale='linear',
-         
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    popt, pov, label, func = get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'exp', return_func=True, beta0=[0.01,.12])
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim)
-    
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )
-    ax_ex.set_yscale('log')
-ax.set_yscale('log')
-
-
-    
-fn = make_fn_scat(f'exp1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-
-
-plt.show()
-
-# %% [markdown] tags=[]
-# ### WET_late
-
-# %%
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-xlab = r'T  [$^\circ$C]'
-ylab = r'OA [$\mu g m^{-3}$]'
-
-
-
-xlims = [22,40]
-ylims = [.1,30]
-
-
-season='WET_late'
-v_x = 'T_C'
-v_y = 'OA'
-
-
-make_plot(v_x, v_y, xlims, ylims, season, 
-              xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale='linear',
-         
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    popt, pov, label, func = get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'exp', return_func=True, beta0=[0.01,.12])
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim)
-    
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )
-    ax_ex.set_yscale('log')
-ax.set_yscale('log')
-
-
-    
-fn = make_fn_scat(f'exp1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-
-
-plt.show()
-
-# %% [markdown]
-# ### DRY
-
-# %%
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-xlab = r'T  [$^\circ$C]'
-ylab = r'OA [$\mu g m^{-3}$]'
-
-
-
-xlims = [22,40]
-ylims = [.1,30]
-
-
-season='DRY'
-v_x = 'T_C'
-v_y = 'OA'
-
-
-make_plot(v_x, v_y, xlims, ylims, season, 
-              xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale='linear',
-         
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    popt, pov, label, func = get_odr_fit_and_labs(df_s, v_x, v_y, fit_func = 'exp', return_func=True, beta0=[0.01,.12])
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim)
-    
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )
-    ax_ex.set_yscale('log')
-ax.set_yscale('log')
-
-
-    
-fn = make_fn_scat(f'exp1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-
-
-plt.show()
+# ### JFM
 
 # %%
 from bs_fdbck_clean.util.BSOA_datamanip.fits import *
@@ -2429,10 +1707,10 @@ import scipy
 
 
 # %% [markdown]
-# ## OA to number
+# ## OA to number: Various seasons
 
 # %% [markdown]
-# ### Nx new version: Nx
+# ### Plotting functions
 
 # %%
 def make_plot2(v_x, v_y, xlims, ylims, season, 
@@ -2512,7 +1790,22 @@ def make_plot2(v_x, v_y, xlims, ylims, season,
 #### WET_mid
 
 # %%
+def plot_fit(func, popt, mo, xlims, yscale, xscale, ax, label):
+
+    x = np.linspace(*xlims)
+    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
+
+    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{label}')
+    ax.set_yscale(yscale)
+    ax.set_xscale(xscale)
+
+
+
+# %%
 models_and_obs[::-1]
+
+# %% [markdown]
+# ### JFM
 
 # %%
 ## Settings
@@ -2689,24 +1982,8 @@ fig.savefig(fn, dpi=150, bbox_inches='tight')#)
 fig.savefig(fn.with_suffix('.pdf'), dpi=150, bbox_inches='tight')#)
 print(fn)
 
-
-# %%
-def plot_fit(func, popt, mo, xlims, yscale, xscale, ax, label):
-
-    x = np.linspace(*xlims)
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{label}')
-    ax.set_yscale(yscale)
-    ax.set_xscale(xscale)
-
-
-
-# %% [markdown]
-# ## Comparing seasons: 
-
-# %% [markdown]
-# ## JFMAM
+# %% [markdown] tags=[]
+# ### JFMAM
 
 # %%
 ## Settings
@@ -2903,8 +2180,203 @@ fig.savefig(fn, dpi=150, bbox_inches='tight')#)
 fig.savefig(fn.with_suffix('.pdf'), dpi=150, bbox_inches='tight')#)
 print(fn)
 
+# %%
+## Settings
+alpha_scatt = 0.5
+figsize=[10,7]
+divide_NorESM_by_factor = 2
+xlab = r'OA [$\mu m^{-3}$]'
+
+season = 'FMA'
+source_list = models_and_obs[::-1]
+
+xlims = [0,5]
+
+ylims = [0,2000]
+
+# OBS: 
+v_x = 'OA'
+
+v_y = 'N50-500'
+ylab = r'N$_{50-500}$  [cm$^{-3}$]'
+
+
+
+xscale='linear'
+yscale='linear'
+
+fig, axs_all = plt.subplots(3,6,figsize=figsize, sharey='row', sharex='col')
+
+
+## Settings
+alpha_scatt = 0.6
+
+
+
+# Make plot
+axs_sub = axs_all[0,:]
+axs_sub[0].set_ylabel(ylab)
+
+make_plot2(v_x, v_y, xlims, ylims, season, 
+              xlab=xlab, ylab=ylab, alpha_scat=.4,
+             source_list = source_list, fig=fig, 
+               axs=axs_sub,
+              xscale='linear', yscale='linear',
+              dic_df_med = dic_df_med,
+           divide_NorESM_by_factor = divide_NorESM_by_factor,
+         )
+
+
+for mo, ax in zip(source_list, axs_sub):
+    df_s =  dic_df_med[mo]
+    print(mo)
+    mask_months = select_months(df_s, season=season)
+    df_s = df_s[mask_months].copy()
+    if (mo =='NorESM') &  (divide_NorESM_by_factor is not None):
+        df_s = df_s/divide_NorESM_by_factor
+
+    #popt, pov, label, func = get_log_fit_abc(df_s,v_x,v_y, return_func=True)
+    popt, pov, label, func, out = get_odr_fit_and_labs(df_s, v_x, v_y, fit_func='linear',  #beta0 = [0,500],
+                                                       #least_square_kwrgs = dict(bounds=[[0,0],[1e9,1e9]]),
+                                                       
+                                                       return_func=True, return_out_obj=True)
+    
+    
+    compute_p_value(df_s, out, popt)
+
+    _mi = df_s[v_x].min()
+    _ma = df_s[v_x].max() 
+    _xlim = [_mi*.95, _ma*1.05]
+    
+    plot_fit(func, popt, mo, _xlim, yscale, xscale, ax, label=label)
+    plot_fit(func, popt, mo, _xlim, yscale, xscale, axs_sub[-1], label=label)
+    ax.set_yscale(yscale)
+    ax.set_xscale(xscale)
+
+axs_sub[-1].legend(bbox_to_anchor=(1,1,), frameon=False)
+#xlims = [.01,10]
+
+ylims = [0,3000]
+
+# OBS: 
+v_y = 'N100-500'
+ylab = r'N$_{100-500}$  [cm$^{-3}$]'
+
+xscale='linear'
+yscale='linear'
+axs_sub = axs_all[1,:]
+axs_sub[0].set_ylabel(ylab)
+
+make_plot2(v_x, v_y, xlims, ylims, season, 
+              xlab=xlab, ylab=ylab, alpha_scat=.4,
+             source_list =source_list, fig=fig, 
+               axs=axs_sub,
+              xscale='linear', yscale='linear',
+              dic_df_med = dic_df_med,
+           divide_NorESM_by_factor = divide_NorESM_by_factor,
+           
+         )
+for mo, ax in zip(source_list, axs_sub):
+    df_s =  dic_df_med[mo]
+    print(mo)
+    mask_months = select_months(df_s, season=season)
+    df_s = df_s[mask_months].copy()
+    if (mo =='NorESM') &  (divide_NorESM_by_factor is not None):
+        df_s = df_s/divide_NorESM_by_factor
+
+    popt, pov, label, func, out = get_odr_fit_and_labs(df_s,v_x,v_y, beta0 = [0,500],
+                                                       #least_square_kwrgs = dict(bounds=[[0,0],[1e9,1e9]]),
+                                                       
+                                                  fit_func='linear', return_func=True, return_out_obj=True)
+    compute_p_value(df_s, out, popt)
+    
+    _mi = df_s[v_x].min()
+    _ma = df_s[v_x].max() 
+    _xlim = [_mi*.95, _ma*1.05]
+    
+    plot_fit(func, popt, mo, _xlim, yscale, xscale, ax, label=label)
+    plot_fit(func, popt, mo, _xlim, yscale, xscale, axs_sub[-1], label=label)
+
+    ax.set_yscale(yscale)
+    ax.set_xscale(xscale)
+
+    
+
+    
+axs_sub[-1].legend(bbox_to_anchor=(1,1,), frameon=False)
+    
+    
+#xlims = [.01,10]
+
+ylims = [0,1000]
+
+
+
+
+
+# OBS: 
+v_y = 'N200-500'
+ylab = r'N$_{200-500}$  [cm$^{-3}$]'
+
+
+xscale='linear'
+yscale='linear'
+axs_sub = axs_all[2,:]
+axs_sub[0].set_ylabel(ylab)
+
+make_plot2(v_x, v_y, xlims, ylims, season, 
+              xlab=xlab, ylab=ylab, alpha_scat=.4,
+             source_list = source_list, fig=fig, 
+               axs=axs_sub,
+              xscale='linear', yscale='linear',
+              dic_df_med = dic_df_med,
+           divide_NorESM_by_factor = divide_NorESM_by_factor,
+           
+         )
+
+for mo, ax in zip(source_list, axs_sub):
+    print(mo)
+    df_s =  dic_df_med[mo]
+    print(mo)
+    mask_months = select_months(df_s, season=season)
+    df_s = df_s[mask_months].copy()
+    if (mo =='NorESM') &  (divide_NorESM_by_factor is not None):
+        df_s = df_s/divide_NorESM_by_factor
+    
+    #popt, pov, label, func = get_log_fit_abc(df_s,v_x,v_y, return_func=True)
+    popt, pov, label, func, out = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', 
+                                                       #least_square_kwrgs = dict(bounds=[[0,0],[1e9,1e9]]),
+                                                       return_func=True, return_out_obj=True)
+    compute_p_value(df_s, out, popt)
+    _mi = df_s[v_x].min()
+    _ma = df_s[v_x].max() 
+    _xlim = [_mi*.95, _ma*1.05]
+    
+    plot_fit(func, popt, mo, _xlim, yscale, xscale, ax, label)
+    plot_fit(func, popt, mo, _xlim, yscale, xscale, axs_sub[-1], label)
+
+    ax.set_yscale(yscale)
+    ax.set_xscale(xscale)
+
+leg = axs_sub[-1].legend(bbox_to_anchor=(.9,1,), frameon=False)
+
+    
+for ax in axs_sub:
+    ax.set_xlabel(xlab)
+sns.despine(fig) 
+
+
+
+    
+    
+fn = make_fn_scat(f'together_{season}_linscale', v_x, 'Nx')
+#ax.legend(frameon=False)
+fig.savefig(fn, dpi=150, bbox_inches='tight')#)
+fig.savefig(fn.with_suffix('.pdf'), dpi=150, bbox_inches='tight')#)
+print(fn)
+
 # %% [markdown]
-# ## FMAM
+# ### FMAM
 
 # %%
 ## Settings
@@ -3102,7 +2574,7 @@ fig.savefig(fn.with_suffix('.pdf'), dpi=150, bbox_inches='tight')#)
 print(fn)
 
 # %% [markdown]
-# ## MAM
+# ### MAM
 
 # %%
 ## Settings
@@ -3300,7 +2772,7 @@ fig.savefig(fn.with_suffix('.pdf'), dpi=150, bbox_inches='tight')#)
 print(fn)
 
 # %% [markdown]
-# ## JFM
+# ### JFM
 
 # %%
 ## Settings
@@ -3501,29 +2973,8 @@ print(fn)
 from scipy import odr
 
 
-# %%
-popt, pov, label, func, out = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', return_func=True, return_out_obj=True)
-x = np.linspace(0,20)
-#plt.plot(x, func(x))
-plt.plot(x, func(x, *popt), c='k', linewidth=3,label='__nolegend__')
-
-y1 = func(x, *(popt-out.sd_beta))
-y2 = func(x, popt[0]-out.sd_beta[0],popt[1]+out.sd_beta[1], )
-y3 = func(x, *(popt+out.sd_beta))
-y4 = func(x, popt[0]+out.sd_beta[0],popt[1]-out.sd_beta[1], )
-#ym = np.max(np.concatenate(y1,y2), axis=0)
-ym = np.maximum(y1,y2)
-ym = np.maximum(ym,y3)
-ym = np.maximum(ym,y4)
-ymi = np.minimum(y1,y2)
-ymi = np.minimum(ymi,y3)
-ymi = np.minimum(ymi,y4)
-
-
-plt.fill_between(x, ymi,ym, alpha=.4)
-
 # %% [markdown]
-# ## New version SON
+# ### SON
 
 # %%
 ## Settings
@@ -3726,1135 +3177,11 @@ print(fn)
 # %% [markdown] tags=[]
 # #### DJF
 
-# %%
-
-## Settings
-alpha_scatt = 0.5
-
-ylab = r'N$_{50-500}$  [cm$^{-3}$]'
-xlab = r'OA [$\mu m^{-3}$]'
-
-season = 'DJF'
-xlims = [.1,35]
-
-ylims = [100,8000]
-
-# OBS: 
-v_x = 'OA'
-v_y = 'N50-500'
-
-
-xscale='log'
-yscale='log'
-
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-
-
-# Make plot
-make_plot(v_x, v_y, xlims, ylims, season, 
-          xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale=yscale,
-          xscale=xscale,
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    popt, pov, label, func = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', return_func=True)
-    
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim,1000)
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )    
-    ax_ex.set_yscale(yscale)
-    ax_ex.set_xscale(xscale)
-
-
-ax.set_yscale(yscale)
-ax.set_xscale(xscale)
-
-
-    
-fn = make_fn_scat(f'lin1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-# %% [markdown] tags=[]
-# #### JF
-
-# %%
-
-## Settings
-alpha_scatt = 0.5
-
-ylab = r'N$_{50-500}$  [cm$^{-3}$]'
-xlab = r'OA [$\mu m^{-3}$]'
-
-season = 'JF'
-xlims = [.1,35]
-
-ylims = [100,8000]
-
-# OBS: 
-v_x = 'OA'
-v_y = 'N50-500'
-
-
-xscale='log'
-yscale='log'
-
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-
-
-# Make plot
-make_plot(v_x, v_y, xlims, ylims, season, 
-          xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale=yscale,
-          xscale=xscale,
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    popt, pov, label, func = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', return_func=True)
-    
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim,1000)
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )    
-    ax_ex.set_yscale(yscale)
-    ax_ex.set_xscale(xscale)
-
-
-ax.set_yscale(yscale)
-ax.set_xscale(xscale)
-
-
-    
-fn = make_fn_scat(f'lin1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
 # %% [markdown] tags=[]
 # #### JFM
-
-# %%
-
-## Settings
-alpha_scatt = 0.5
-
-ylab = r'N$_{50-500}$  [cm$^{-3}$]'
-xlab = r'OA [$\mu m^{-3}$]'
-
-season = 'JFM'
-xlims = [.1,35]
-
-ylims = [100,13000]
-
-# OBS: 
-v_x = 'OA'
-v_y = 'N50-500'
-
-
-xscale='log'
-yscale='log'
-
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-
-
-# Make plot
-make_plot(v_x, v_y, xlims, ylims, season, 
-          xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale=yscale,
-          xscale=xscale,
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    print(len(df_s))
-    popt, pov, label, func = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', return_func=True)
-    
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim,1000)
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )    
-    ax_ex.set_yscale(yscale)
-    ax_ex.set_xscale(xscale)
-
-
-ax.set_yscale(yscale)
-ax.set_xscale(xscale)
-
-
-    
-fn = make_fn_scat(f'lin1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
 
 # %% [markdown] tags=[]
 # #### WET_old
-
-# %%
-
-## Settings
-alpha_scatt = 0.5
-
-ylab = r'N$_{50-500}$  [cm$^{-3}$]'
-xlab = r'OA [$\mu m^{-3}$]'
-
-season = 'WET_old'
-xlims = [.1,35]
-
-ylims = [100,13000]
-
-# OBS: 
-v_x = 'OA'
-v_y = 'N50-500'
-
-
-xscale='log'
-yscale='log'
-
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-
-
-# Make plot
-make_plot(v_x, v_y, xlims, ylims, season, 
-          xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale=yscale,
-          xscale=xscale,
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    print(len(df_s))
-    popt, pov, label, func = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', return_func=True)
-    
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim,1000)
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )    
-    ax_ex.set_yscale(yscale)
-    ax_ex.set_xscale(xscale)
-
-
-ax.set_yscale(yscale)
-ax.set_xscale(xscale)
-
-
-    
-fn = make_fn_scat(f'lin1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-# %% [markdown] tags=[]
-# #### SON
-
-# %%
-
-## Settings
-alpha_scatt = 0.5
-
-ylab = r'N$_{50-500}$  [cm$^{-3}$]'
-xlab = r'OA [$\mu m^{-3}$]'
-
-season = 'SON'
-xlims = [1,60]
-
-ylims = [100,13000]
-
-# OBS: 
-v_x = 'OA'
-v_y = 'N50-500'
-
-
-xscale='log'
-yscale='log'
-
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-
-
-# Make plot
-make_plot(v_x, v_y, xlims, ylims, season, 
-          xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale=yscale,
-          xscale=xscale,
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    print(len(df_s))
-    popt, pov, label, func = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', return_func=True)
-    
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim,1000)
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )    
-    ax_ex.set_yscale(yscale)
-    ax_ex.set_xscale(xscale)
-
-
-ax.set_yscale(yscale)
-ax.set_xscale(xscale)
-
-
-    
-fn = make_fn_scat(f'lin1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-# %% [markdown]
-# #### DRY
-
-# %%
-#fig, axs = plt.subplots(1,1,dpi=150, figsize=[5,5])
-# fig, ax, daxs, axs_extra = make_cool_grid3()
-# ax = axsaxs_extra
-
-
-## Settings
-alpha_scatt = 0.5
-
-ylab = r'N$_{50-500}$  [cm$^{-3}$]'
-xlab = r'OA [$\mu m^{-3}$]'
-
-season = 'DRY'
-xlims = [1,35]
-
-ylims = [200,8000]
-
-# OBS: 
-v_x = 'OA'
-v_y = 'N50-500'
-
-
-xscale='linear'
-yscale='linear'
-
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-
-
-
-make_plot(v_x, v_y, xlims, ylims, season, 
-              xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale=yscale,
-          xscale=xscale,
-         
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    popt, pov, label, func = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', return_func=True)
-    
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim)
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )    
-    ax_ex.set_yscale(yscale)
-    ax_ex.set_xscale(xscale)
-
-
-ax.set_yscale(yscale)
-ax.set_xscale(xscale)
-
-
-    
-fn = make_fn_scat(f'lin1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-# %% [markdown]
-# #### WET
-
-# %%
-#fig, axs = plt.subplots(1,1,dpi=150, figsize=[5,5])
-# fig, ax, daxs, axs_extra = make_cool_grid3()
-# ax = axsaxs_extra
-
-
-## Settings
-alpha_scatt = 0.5
-
-ylab = r'N$_{50-500}$  [cm$^{-3}$]'
-xlab = r'OA [$\mu m^{-3}$]'
-
-season = 'WET'
-xlims = [.1,35]
-
-ylims = [100,8000]
-
-# OBS: 
-v_x = 'OA'
-v_y = 'N50-500'
-
-
-xscale='log'
-yscale='log'
-
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-
-
-
-make_plot(v_x, v_y, xlims, ylims, season, 
-              xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale=yscale,
-          xscale=xscale,
-         
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    popt, pov, label, func = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', return_func=True)
-    
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim,1000)
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )    
-    ax_ex.set_yscale(yscale)
-    ax_ex.set_xscale(xscale)
-
-
-ax.set_yscale(yscale)
-ax.set_xscale(xscale)
-
-
-    
-fn = make_fn_scat(f'lin1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-# %% [markdown]
-# #### Wet mid
-
-# %%
-#fig, axs = plt.subplots(1,1,dpi=150, figsize=[5,5])
-# fig, ax, daxs, axs_extra = make_cool_grid3()
-# ax = axsaxs_extra
-
-
-## Settings
-alpha_scatt = 0.5
-
-ylab = r'N$_{50-500}$  [cm$^{-3}$]'
-xlab = r'OA [$\mu m^{-3}$]'
-
-season = 'WET_mid'
-xlims = [.1,35]
-
-ylims = [100,8000]
-
-# OBS: 
-v_x = 'OA'
-v_y = 'N50-500'
-
-
-xscale='log'
-yscale='log'
-
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-
-
-
-make_plot(v_x, v_y, xlims, ylims, season, 
-              xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale=yscale,
-          xscale=xscale,
-         
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    popt, pov, label, func = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', return_func=True)
-    
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim,1000)
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )    
-    ax_ex.set_yscale(yscale)
-    ax_ex.set_xscale(xscale)
-
-
-ax.set_yscale(yscale)
-ax.set_xscale(xscale)
-
-
-    
-fn = make_fn_scat(f'lin1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-# %% [markdown]
-# #### Wet_early
-
-# %%
-#fig, axs = plt.subplots(1,1,dpi=150, figsize=[5,5])
-# fig, ax, daxs, axs_extra = make_cool_grid3()
-# ax = axsaxs_extra
-
-
-## Settings
-alpha_scatt = 0.5
-
-ylab = r'N$_{50-500}$  [cm$^{-3}$]'
-xlab = r'OA [$\mu m^{-3}$]'
-
-season = 'WET_early'
-xlims = [.1,35]
-
-ylims = [100,8000]
-
-# OBS: 
-v_x = 'OA'
-v_y = 'N50-500'
-
-
-xscale='log'
-yscale='log'
-
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-
-
-
-make_plot(v_x, v_y, xlims, ylims, season, 
-              xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale=yscale,
-          xscale=xscale,
-         
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    popt, pov, label, func = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', return_func=True)
-    
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim,1000)
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )    
-    ax_ex.set_yscale(yscale)
-    ax_ex.set_xscale(xscale)
-
-
-ax.set_yscale(yscale)
-ax.set_xscale(xscale)
-
-
-    
-fn = make_fn_scat(f'lin1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-# %% [markdown] tags=[]
-# #### Wet_late
-
-# %%
-#fig, axs = plt.subplots(1,1,dpi=150, figsize=[5,5])
-# fig, ax, daxs, axs_extra = make_cool_grid3()
-# ax = axsaxs_extra
-
-
-## Settings
-alpha_scatt = 0.5
-
-ylab = r'N$_{50-500}$  [cm$^{-3}$]'
-xlab = r'OA [$\mu m^{-3}$]'
-
-season = 'WET_late'
-xlims = [.1,35]
-
-ylims = [100,8000]
-
-# OBS: 
-v_x = 'OA'
-v_y = 'N50-500'
-
-
-xscale='log'
-yscale='log'
-
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-
-
-
-make_plot(v_x, v_y, xlims, ylims, season, 
-              xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale=yscale,
-          xscale=xscale,
-         
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    popt, pov, label, func = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', return_func=True)
-    
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim,1000)
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )    
-    ax_ex.set_yscale(yscale)
-    ax_ex.set_xscale(xscale)
-
-
-ax.set_yscale(yscale)
-ax.set_xscale(xscale)
-
-
-    
-fn = make_fn_scat(f'lin1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-# %% [markdown] tags=[]
-# ## N100
-
-# %% [markdown] tags=[]
-# #### WET_old
-
-# %%
-
-## Settings
-alpha_scatt = 0.5
-
-ylab = r'N$_{100-500}$  [cm$^{-3}$]'
-xlab = r'OA [$\mu m^{-3}$]'
-
-season = 'WET_old'
-xlims = [.1,35]
-
-ylims = [10,13000]
-
-# OBS: 
-v_x = 'OA'
-v_y = 'N100-500'
-
-
-xscale='log'
-yscale='log'
-
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-
-
-# Make plot
-make_plot(v_x, v_y, xlims, ylims, season, 
-          xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale=yscale,
-          xscale=xscale,
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    print(len(df_s))
-    popt, pov, label, func = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', return_func=True)
-    
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim,1000)
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )    
-    ax_ex.set_yscale(yscale)
-    ax_ex.set_xscale(xscale)
-
-
-ax.set_yscale(yscale)
-ax.set_xscale(xscale)
-
-
-    
-fn = make_fn_scat(f'lin1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-# %% [markdown] tags=[]
-# #### JFM
-
-# %%
-
-## Settings
-alpha_scatt = 0.5
-
-ylab = r'N$_{100-500}$  [cm$^{-3}$]'
-xlab = r'OA [$\mu m^{-3}$]'
-
-season = 'JFM'
-xlims = [.1,35]
-
-ylims = [10,13000]
-
-# OBS: 
-v_x = 'OA'
-v_y = 'N100-500'
-
-
-xscale='log'
-yscale='log'
-
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-
-
-# Make plot
-make_plot(v_x, v_y, xlims, ylims, season, 
-          xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale=yscale,
-          xscale=xscale,
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    print(len(df_s))
-    popt, pov, label, func = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', return_func=True)
-    
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim,1000)
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )    
-    ax_ex.set_yscale(yscale)
-    ax_ex.set_xscale(xscale)
-
-
-ax.set_yscale(yscale)
-ax.set_xscale(xscale)
-
-
-    
-fn = make_fn_scat(f'lin1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-# %% [markdown] tags=[]
-# #### SON
-
-# %%
-
-## Settings
-alpha_scatt = 0.5
-
-ylab = r'N$_{100-500}$  [cm$^{-3}$]'
-xlab = r'OA [$\mu m^{-3}$]'
-
-season = 'SON'
-xlims = [1,60]
-
-ylims = [90,13000]
-
-# OBS: 
-v_x = 'OA'
-v_y = 'N100-500'
-
-
-xscale='log'
-yscale='log'
-
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-
-
-# Make plot
-make_plot(v_x, v_y, xlims, ylims, season, 
-          xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale=yscale,
-          xscale=xscale,
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    print(len(df_s))
-    popt, pov, label, func = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', return_func=True)
-    
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim,1000)
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )    
-    ax_ex.set_yscale(yscale)
-    ax_ex.set_xscale(xscale)
-
-
-ax.set_yscale(yscale)
-ax.set_xscale(xscale)
-
-
-    
-fn = make_fn_scat(f'lin1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-# %% [markdown]
-# ## N200
-
-# %% [markdown] tags=[]
-# #### JFM
-
-# %%
-
-## Settings
-alpha_scatt = 0.5
-
-## Settings
-alpha_scatt = 0.5
-
-ylab = r'N$_{200-500}$  [cm$^{-3}$]'
-xlab = r'OA [$\mu m^{-3}$]'
-
-season = 'JFM'
-xlims = [0,20]
-
-ylims = [0,500]
-
-# OBS: 
-v_x = 'OA'
-v_y = 'N200-500'
-
-
-xscale='linear'
-yscale='linear'
-
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-
-
-# Make plot
-make_plot(v_x, v_y, xlims, ylims, season, 
-          xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale=yscale,
-          xscale=xscale,
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    print(len(df_s))
-    popt, pov, label, func = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', return_func=True)
-    
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim,1000)
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )    
-    ax_ex.set_yscale(yscale)
-    ax_ex.set_xscale(xscale)
-
-
-ax.set_yscale(yscale)
-ax.set_xscale(xscale)
-
-
-    
-fn = make_fn_scat(f'lin1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-# %% [markdown] tags=[]
-# #### SON
-
-# %%
-
-## Settings
-alpha_scatt = 0.5
-
-## Settings
-alpha_scatt = 0.5
-
-ylab = r'N$_{200-500}$  [cm$^{-3}$]'
-xlab = r'OA [$\mu m^{-3}$]'
-
-season = 'SON'
-xlims = [0,20]
-
-ylims = [0,500]
-xlims = [0,30]
-
-ylims = [0,1000]
-# OBS: 
-v_x = 'OA'
-v_y = 'N200-500'
-
-
-xscale='linear'
-yscale='linear'
-
-fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
-axs_extra = axs_extra.flatten()
-
-## Settings
-alpha_scatt = 0.6
-
-
-
-# Make plot
-make_plot(v_x, v_y, xlims, ylims, season, 
-          xlab, ylab, .3, models_and_obs, fig, ax, daxs, axs_extra,
-          yscale=yscale,
-          xscale=xscale,
-         )
-
-
-for mo, ax_ex in zip(models_and_obs, axs_extra[:]):
-    df_s =  dic_df_med[mo]
-    print(mo)
-    mask_months = select_months(df_s, season=season)
-    df_s = df_s[mask_months].copy()
-    print(len(df_s))
-    popt, pov, label, func = get_odr_fit_and_labs(df_s,v_x,v_y, fit_func='linear', return_func=True)
-    
-    _mi = df_s[v_x].min()
-    _ma = df_s[v_x].max() 
-    _xlim = [_mi*.95, _ma*1.05]
-    x = np.linspace(*_xlim,1000)
-    ax.plot(x, func(x, *popt), c='w', linewidth=3,label='__nolegend__')
-    ax.plot(x, func(x, *popt), linewidth=2, c=cdic_model[mo],label=f'{mo}: {label}')
-
-    ax_ex.plot(x, func(x, *popt), c='w', linewidth=2,label=f'{mo}: {label}',
-             )
-    ax_ex.plot(x, func(x, *popt), c=cdic_model[mo],label=f'{mo}: {label}',
-              )    
-    ax_ex.set_yscale(yscale)
-    ax_ex.set_xscale(xscale)
-
-
-ax.set_yscale(yscale)
-ax.set_xscale(xscale)
-
-
-    
-fn = make_fn_scat(f'lin1_{season}', v_x, v_y)
-ax.legend(frameon=False)
-fig.savefig(fn, dpi=150)
-fig.savefig(fn.with_suffix('.pdf'), dpi=150)
-
-# %%
-
-# %%
-
-# %%
 
 # %% [markdown]
 # ## Extra stuff

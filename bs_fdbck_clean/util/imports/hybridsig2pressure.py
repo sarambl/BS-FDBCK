@@ -1,14 +1,14 @@
 import Ngl
 import xarray as xr
 import numpy as np
+from pathlib import Path
+
 
 import bs_fdbck_clean.data_info.variable_info
 from bs_fdbck_clean import constants
-import useful_scit.util.log as log
-
 from bs_fdbck_clean.util.filenames import get_filename_pressure_coordinate_field
 from bs_fdbck_clean.util.practical_functions import extract_path_from_filepath, make_folders
-
+# %%
 default_save_pressure_coordinates = constants.get_outdata_path('pressure_coords')  # 'Data/Fields_pressure_coordinates'
 
 
@@ -61,7 +61,7 @@ def hybsig2pres(ds, var, save_field=False):
     da_out.attrs['pressure_coords'] = 'True'
     # same field
     if save_field:
-        log.ger.info('Saved:' + var)
+        print('Saved:' + var)
 
         ds_save = ds.copy().drop_vars(list(ds.data_vars))
         ds_save[var] = da_out
@@ -89,7 +89,7 @@ def hybsig2pres_vars(ds, _vars=None, save_field=True):
     :param save_field:
     :return:
     """
-    log.ger.debug(f'hybsig2pres:{_vars}')
+    print(f'hybsig2pres:{_vars}')
 
     if _vars is None:
         _vars = list(set(ds.data_vars) - set(bs_fdbck_clean.data_info.variable_info.not_pressure_coords))
@@ -106,7 +106,7 @@ def hybsig2pres_vars(ds, _vars=None, save_field=True):
             compute = False
         # Do conversion only if lev is coordinate and only if I haven't listed it as non pressure coord
         if 'lev' not in da.dims or var in bs_fdbck_clean.data_info.variable_info.not_pressure_coords:
-            log.ger.info('Saved:' + var)
+            print('Saved:' + var)
             ds[var].attrs['pressure_coords'] = 'True'
             save_pressure_coordinate_field(ds, var)
             compute = False
@@ -139,7 +139,7 @@ def save_pressure_coordinate_field(ds, var,
             check = True
 
     if not check:  # (not ds[var].attrs['Pres_addj']) and (not ds[var].attrs['pressure_coords'])\
-        log.ger.info('Not pressure adjusted! Will not save')
+        print('Not pressure adjusted! Will not save')
     else:
         from_t = ds.attrs['from_time']  # ds['time'][argmin].values
         to_t = ds.attrs['to_time']  # ds['time'][argmax].values
@@ -147,13 +147,13 @@ def save_pressure_coordinate_field(ds, var,
 
         filename = get_filename_pressure_coordinate_field(var, model, case, from_t, to_t)
         dummy = ds[var].copy()
+
         make_folders(extract_path_from_filepath(filename))
-        log.ger.debug('Saving %s pressure coordinate field to file %s' % (var, filename))  # 'Time not in datetime')
+        print('Saving %s pressure coordinate field to file %s' % (var, filename))  # 'Time not in datetime')
         dummy.attrs['pressure_coords'] = 'True'
         try:
-            log.ger.info(filename)
             dummy.to_netcdf(filename, mode='w')  # ,encoding={'time':{'units':'days since 2000-01-01 00:00:00'}})
         except PermissionError:
-            log.ger.info(f'couldnt access file {filename}')
+            print(f'couldnt access file {filename}')
         del dummy
         return

@@ -318,17 +318,21 @@ to_time2 ='2019-01-01'
 
 # %%
 case_name_noresm = 'OsloAero_intBVOC_f09_f09_mg17_fssp245'
+model_name_noresm = 'NorESM'
 
 
-# %% [markdown]
-# #### Input files created in [03-01-01-create_file-ALL_year_new_version.ipynb](03-01-01-create_file-ALL_year_new_version.ipynb)
+
+# %% [markdown] jp-MarkdownHeadingCollapsed=true tags=[]
+# #### Input files created in [03-01-01-create_file_ATTO.ipynb](03-01-01-create_file_ATTO.ipynb)
 
 # %% [markdown] tags=[]
 # #### Input files
 
 # %%
-fn_noresm = path_extract_latlon_outdata/ case_name_noresm/f'{case_name_noresm}.h1._{from_time1}-{to_time2}_concat_subs_{str_coordlims}_lev1_final.nc'
-fn_noresm_csv = path_extract_latlon_outdata/ case_name_noresm/f'{case_name_noresm}.h1._{from_time1}-{to_time2}_concat_subs_{str_coordlims}_lev1_finalALL_year.csv'
+input_path_noresm = path_extract_latlon_outdata / model_name_noresm / case_name_noresm 
+
+# %%
+fn_noresm_csv = input_path_noresm / f'{case_name_noresm}.h1._{from_time1}-{to_time2}_concat_subs_{str_coordlims}_lev1_finalALL_year.csv'
 
 # %%
 
@@ -472,6 +476,7 @@ df_mod_ukesm.to_xarray()
 df_mod_noresm = df_mod_noresm[df_mod_noresm['month'].isin(season2month[season])]
 df_mod_echam = df_mod_echam[df_mod_echam['month'].isin(season2month[season])]
 df_mod_ec_earth = df_mod_ec_earth[df_mod_ec_earth['month'].isin(season2month[season])]
+df_mod_ukesm =df_mod_ukesm[df_mod_ukesm['month'].isin(season2month[season])] 
 
 # %%
 df_mod_echam['cl_time_ct'].plot.hist()

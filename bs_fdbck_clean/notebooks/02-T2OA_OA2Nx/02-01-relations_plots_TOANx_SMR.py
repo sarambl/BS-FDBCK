@@ -14,19 +14,38 @@
 # ---
 
 # %% [markdown]
-# # Nx versus T and OA
+# # Temperature to OA and OA to Nx plots: ATTO station
+
+# %% [markdown]
+# ### Import and settings
+
+# %%
+from bs_fdbck_clean.preprocess.launch_monthly_station_collocation import launch_monthly_station_output
+from bs_fdbck_clean.util.Nd.sizedist_class_v2.SizedistributionBins import SizedistributionStationBins
+from bs_fdbck_clean.util.collocate.collocateLONLAToutput import CollocateLONLATout
+from bs_fdbck_clean.data_info.variable_info import list_sized_vars_nonsec, list_sized_vars_noresm
+import useful_scit.util.log as log
+log.ger.setLevel(log.log.INFO)
+import time
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+import numpy as np
+
+import numpy as np
+from sklearn.linear_model import LinearRegression, BayesianRidge
+
+import pandas as pd
 
 # %%
 # %load_ext autoreload
 
 # %autoreload 2
 
-
-# %%
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-# %%
 from IPython import get_ipython
 
 # noinspection PyBroadException
@@ -38,22 +57,6 @@ try:
 except:
     pass
 
-# %%
-import scienceplots
-import scienceplots
-plt.style.use([
-    'default',
-    # 'science',
-    'acp',
-    # 'sp-grid',
-    'no-black',
-    'no-latex',
-    'illustrator-safe'
-])
-
-
-# %%
-import scienceplots
 import scienceplots
 plt.style.use([
     'default',
@@ -73,14 +76,16 @@ mpl.rc('font',**fonts)
 
 # %%
 
-# %%
-
 import numpy as np
 
 label_dic =dict(
     T_C=r'T  [$^\circ$C]',
     OA =r'OA [$\mu g m^{-3}$]',
 )
+
+# %% [markdown]
+# ## Set settings:
+#
 
 # %%
 select_station = 'SMR'
@@ -105,12 +110,10 @@ from bs_fdbck_clean.constants import path_measurement_data
 postproc_data = path_measurement_data /'model_station'/select_station
 postproc_data_obs = path_measurement_data /'SMEARII'/'processed'
 
-
-# %%
 fn_obs_comb_data_full_time =postproc_data_obs /'SMEAR_data_comb_hourly.csv'
 
-# %%
 fn_obs_comb_data_full_time
+
 
 # %%
 plot_path = Path(f'Plots/{select_station}')
@@ -139,39 +142,9 @@ di_mod2cases = mod2cases.copy()
 
 
 # %%
-from bs_fdbck_clean.preprocess.launch_monthly_station_collocation import launch_monthly_station_output
-from bs_fdbck_clean.util.Nd.sizedist_class_v2.SizedistributionBins import SizedistributionStationBins
-from bs_fdbck_clean.util.collocate.collocateLONLAToutput import CollocateLONLATout
-from bs_fdbck_clean.data_info.variable_info import list_sized_vars_nonsec, list_sized_vars_noresm
-import useful_scit.util.log as log
-log.ger.setLevel(log.log.INFO)
-import time
-
-# %%
-import seaborn as sns
-import matplotlib.pyplot as plt
-
-# %%
-import numpy as np
-
-# %%
-import numpy as np
-from sklearn.linear_model import LinearRegression, BayesianRidge
-
-# %%
 
 # %% [markdown] tags=[]
 # ### Constants:
-
-# %%
-R = 287.058
-pressure = 1000. #hPa
-kg2ug = 1e9
-temperature = 273.15
-
-
-# %%
-import pandas as pd
 
 # %% [markdown]
 # ## Read in model data
@@ -199,7 +172,7 @@ df_obs = pd.read_csv(fn_obs_comb_data_full_time,index_col=0)
 df_obs = df_obs.rename({'Org_STP':'OA', 'HYY_META.T168':'T_C'}, axis=1)
 
 # %%
-df_obs
+df_obs.head()
 
 # %%
 dic_df_pre['Observations']=dict()
@@ -214,7 +187,7 @@ mod2cases['Observations']= ['Observations']
 dic_mod_ca = dic_df_pre.copy()
 
 # %% [markdown]
-# ### Fit funcs
+# ## Some useful stuff 
 
 # %%
 from bs_fdbck_clean.util.BSOA_datamanip.fits import *
@@ -248,7 +221,7 @@ di_mod2cases = mod2cases.copy()
 
 
 # %% [markdown]
-# ### Save result in dictionary
+# ## Save result in dictionary
 
 # %%
 dic_df_mod_case = dic_mod_ca.copy()
@@ -283,14 +256,12 @@ df_s1.resample('D').median()['N50_STP'].plot(marker='.', linewidth=0, c='b')
 
 
 # %% [markdown] tags=[]
-# # Merge with observations:
+# ## Merge with observations:
 
 # %%
 dic_df_pre = dict()#dic_df_mod_case.copy()#deep=True)
 for mod in dic_df_mod_case.keys():
     dic_df_pre[mod] = dic_df_mod_case[mod].copy()
-
-# %%
 
 # %% [markdown]
 # ## Rename STP values
@@ -362,12 +333,6 @@ dic_df_mod_case['Observations']['Observations'] = add_log(dic_df_mod_case['Obser
 df_ons = dic_df_mod_case['Observations']['Observations']
 
 
-# %%
-mod='NorESM'
-
-# %%
-ca = mod2cases[mod][0]
-
 # %% [markdown]
 # ## Compute daily medians:
 
@@ -382,7 +347,7 @@ path_save_daily_medians.parent.mkdir(exist_ok=True)
 # ### Remove values where fewer than x values
 
 # %%
-minimal_number_per_day = 20
+minimal_number_per_day = 16
 obs_per_day =  dic_df_mod_case['Observations']['Observations'].resample('D').count()['OA']
 obs_per_day
 
@@ -396,8 +361,6 @@ _df_m['obs_per_day'].plot(marker='*', linewidth=0)
 
 _df_c = _df[_df['some_obs_missing']==False].resample('d').count()['OA']
 _df_c.plot(marker='.', linewidth=0)
-
-# %%
 
 # %%
 dic_df_med = dict()
@@ -420,6 +383,10 @@ for mo in dic_df_mod_case.keys():
         fp = path_save_daily_medians.parent / f'{path_save_daily_medians.name}_{use_name}.csv'
         dic_df_med[use_name].to_csv(fp)
 
+
+# %% [markdown]
+# ## Write to file: 
+#
 
 # %%
 dic_df_med = dict()
@@ -447,11 +414,13 @@ from bs_fdbck_clean.util.plot.BSOA_plots import make_cool_grid2, make_cool_grid3
 import scipy
 
 # %% [markdown]
-# ### Fit funcs
+# ## Some functions
 
 # %%
 from bs_fdbck_clean.util.BSOA_datamanip.fits import *
 from bs_fdbck_clean.util.BSOA_datamanip.atto import season2month
+
+from bs_fdbck_clean.util.plot.BSOA_plots import cdic_model, make_cool_grid5
 
 
 # %% [markdown] tags=[]
@@ -467,12 +436,6 @@ def select_months(df, season = None, month_list=None):
     return df['month'].isin(month_list)
 
 # %%
-from bs_fdbck_clean.util.BSOA_datamanip.fits import *
-
-# %%
-from bs_fdbck_clean.util.plot.BSOA_plots import cdic_model, make_cool_grid5
-
-# %%
 models
 
 # %%
@@ -481,7 +444,7 @@ models_and_obs
 
 
 # %% [markdown]
-# ## Make plot
+# ## Make plot function
 
 # %%
 def make_plot(v_x, v_y, xlims, ylims, season, 
@@ -627,23 +590,10 @@ def make_plot(v_x, v_y, xlims, ylims, season,
 #### WET_mid
 
 # %% [markdown]
-# ## T to OA, exp
+# # Temperature to OA
 
 # %% [markdown] tags=[]
 # ### JA
-
-# %%
-models_and_obs
-
-# %%
-df_s =  dic_df_med['EC-Earth']
-df_s['N100'].plot()
-
-# %%
-
-
-# %%
-models_and_obs
 
 # %%
 fig, ax, daxs, axs_extra = make_cool_grid5()##ncols_extra=2, nrows_extra=2,)# w_ratio_sideplot=.5)
@@ -786,7 +736,7 @@ print(fn)
 
 
 # %% [markdown]
-# # Nx new version
+# # OA to Nx
 
 # %%
 def make_plot2(v_x, v_y, xlims, ylims, season, 
@@ -873,17 +823,8 @@ def plot_fit(func, popt, mo, xlims, yscale, xscale, ax):
 
 
 
-# %%
-dic_df_med['EC-Earth']
-
-# %%
-df_s[[v_x,v_y]]
-
-# %%
-df_s[[v_x,v_y]].dropna()
-
-# %%
-_df = df_s[[v_x,v_y]].dropna()
+# %% [markdown]
+# ## JA
 
 # %%
 ## Settings

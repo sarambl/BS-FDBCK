@@ -36,7 +36,9 @@ pip install ebas_io-3.6.1-py3-none-any.wh
 ## Edit settings and paths: 
 Edit paths at the top of [bs_fdbck_clean/constants.py](bs_fdbck/constants.py).
 
-##
+## Data organising: 
+
+
 
 
 ## To reproduce results:
@@ -49,4 +51,50 @@ chmod +x preprocess.sh
 
 
 ### Run notebooks:
-Run the notebooks in [bs_fdbck_clean/notebooks](bs_fdbck_clean/notebooks) according to their ordering. 
+Run the notebooks in [bs_fdbck_clean/notebooks](bs_fdbck_clean/notebooks) according to their ordering.
+
+```bash
+cd bs_fdbck_clean/notebooks/01-01-preprocess_station_data/
+python 01-01-01-Preprocess_measurement_dataset_HYYTIALA.py
+python 01-01-02-Preprocess_ACSM_meteo_sizedit_data_ATTO.py
+python 01-01-03-Preprocess_dataset_MODELS_SMR.py
+python 01-01-04-Preprocess_dataset_MODELS_ATTO.py
+
+cd ../01-02-preprocess_satellite/
+python 01-02-01-download_and_preproc_MODIS.py
+python 01-02-02-produce_hyytiala_satellite_dataset.py
+python 01-02-03_produce_ATTO_satellite_dataset.py
+
+cd ../02-T2OA_OA2Nx/
+python 02-01-relations_plots_TOANx_SMR.py
+python 02-02-relation_plots_TOANx_ATTO.py
+python 02-03-plot_both_stations_together.py
+python 02-04-01_relations_plots_emissions_ATTO.py
+python 02-04-01_relations_plots_emissions_SMR.py
+
+cd ../03-cloud_properties/03-01-ATTO
+python 03-01-01-create_file-ALL_year_new_version.py
+python 03-01-03-01_confidence_interval_diff_median_my_data-ATTO_FMA.py
+python 03-01-03-02_confidence_interval_diff_median_my_data-ATTO_Nx_FMA.py
+python 03-01-04-01_confidence_interval_diff_median_my_data-ATTO_FMAM.py
+python 03-01-05-01_confidence_interval_diff_median_my_data-ATTO_JFM.py
+python 03-01-07-01_confidence_interval_diff_median_my_data-ATTO_JFMAM.py
+python 03-01-08-01_confidence_interval_diff_median_my_data-ATTO_MAM.py
+
+
+cd ../03-02-SMR
+python 03-02-01-create_file.py
+python 03-02-02-01_confidence_interval_diff_median_my_data-SMR_JA.py
+python 03-02-02-02_confidence_interval_diff_median_my_data-SMR_JA-Nx.py
+
+cd ../
+python 03-03-compare_differentials.py
+
+cd ../04-evaluation_measurements
+python 04-01-OA_against_OA.py
+python 04-02-OA_against_OA_ATTO.py
+python 04-03-Nx_SMR.py
+python 04-04-Nx_ATTO.py
+python 04-05_NorESM_yield.ipynb
+
+```

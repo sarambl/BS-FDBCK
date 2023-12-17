@@ -44,6 +44,25 @@ from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 
 # %%
+import scienceplots
+import scienceplots
+plt.style.use([
+    'default',
+    #'science',
+    'acp',
+    #'nature',
+    # 'sp-grid',
+    'no-black',
+    'no-latex',
+    'illustrator-safe'
+])
+
+fonts = {'family':'sans-serif', 'sans-serif': 'DejaVu Sans'}
+
+import matplotlib as mpl
+mpl.rc('font',**fonts)
+
+# %%
 # %load_ext autoreload
 # %autoreload 2
 
@@ -313,17 +332,23 @@ str_coordlims = f'{str_lonlim}_{str_latlim}'
 
 # %%
 case_name_noresm = 'OsloAero_intBVOC_f09_f09_mg17_fssp245'
+model_name_noresm = 'NorESM'
+
 
 
 # %% [markdown]
-# #### Input files created in [02-create_file-long_sum.ipynb](02-create_file-long_sum)
+# #### Input files created in [03-02-01-create_file.ipynb](03-02-01-create_file.ipynb)
 
 # %% [markdown] tags=[]
 # #### Input files
 
 # %%
-fn_noresm = path_extract_latlon_outdata/ case_name_noresm/f'{case_name_noresm}.h1._{from_time1}-{to_time2}_concat_subs_{str_coordlims}_lev1_final.nc'
-fn_noresm_csv = path_extract_latlon_outdata/ case_name_noresm/f'{case_name_noresm}.h1._{from_time1}-{to_time2}_concat_subs_{str_coordlims}_lev1_finalALL_year.csv'
+input_path_noresm = path_extract_latlon_outdata / model_name_noresm / case_name_noresm 
+
+# %%
+fn_noresm     = input_path_noresm / f'{case_name_noresm}.h1._{from_time1}-{to_time2}_concat_subs_{str_coordlims}_lev1_final.nc'
+fn_noresm_csv = input_path_noresm / f'{case_name_noresm}.h1._{from_time1}-{to_time2}_concat_subs_{str_coordlims}_lev1_finalALL_year.csv'
+
 
 # %%
 
@@ -482,6 +507,7 @@ df_mod_echam['month']
 df_mod_noresm = df_mod_noresm[df_mod_noresm['month'].isin(season2month[season])]
 df_mod_echam = df_mod_echam[df_mod_echam['month'].isin(season2month[season])]
 df_mod_ec_earth = df_mod_ec_earth[df_mod_ec_earth['month'].isin(season2month[season])]
+df_mod_ukesm = df_mod_ukesm[df_mod_ukesm['month'].isin(season2month[season])]
 
 # %% [markdown]
 # ### Organize data in dictionary
@@ -867,7 +893,7 @@ leg_els = [
 ]
 
 ax.legend(handles = leg_els, frameon=False)
-ax.set_xlabel('Cloud optical thickness')
+ax.set_xlabel('Cloud optical thickness []')
 #plt.ylim([0,250])
 print(len(_df))
 sns.despine(fig)
@@ -1098,7 +1124,7 @@ hue_var = 'N100'
 hue_var_cat = f'{hue_var}_category'
 hue_labs = [f'{hue_var} low', f'{hue_var} high']
 
-itterations = 1000
+itterations = 50000
 
 
 
@@ -1184,6 +1210,8 @@ for source in dic_median_CI[v].keys():
     
     fn = make_fn('sample_stats', v_hue,v, comment=source).with_suffix('.csv')
     _df_both.to_csv(fn)
+    print(fn)
+    
 
     
 
@@ -1212,7 +1240,7 @@ x_var = 'CWP_cut2lm'
 y_var1 = 'COT'
 y_var2 = 'r_eff'
 
-ylab1 = r'$\Delta $ Cloud optical depth []'
+ylab1 = r'$\Delta $ Cloud optical thickness []'
 ylab2 = r'$\Delta r_e$ [$\mu$ m]'
 y_pos = 0
 
@@ -1299,7 +1327,7 @@ hue_var = 'N50'
 hue_var_cat = f'{hue_var}_category'
 hue_labs = [f'{hue_var} low', f'{hue_var} high']
 
-itterations = 1000
+itterations = 50000
 
 
 
@@ -1413,7 +1441,7 @@ x_var = 'CWP_cut2lm'
 y_var1 = 'COT'
 y_var2 = 'r_eff'
 
-ylab1 = r'$\Delta $ Cloud optical depth []'
+ylab1 = r'$\Delta $ Cloud optical thickness []'
 ylab2 = r'$\Delta r_e$ [$\mu$ m]'
 y_pos = 0
 
@@ -1500,7 +1528,7 @@ hue_var = 'N200'
 hue_var_cat = f'{hue_var}_category'
 hue_labs = [f'{hue_var} low', f'{hue_var} high']
 
-itterations = 1000
+itterations = 50000
 
 
 
@@ -1614,7 +1642,7 @@ x_var = 'CWP_cut2lm'
 y_var1 = 'COT'
 y_var2 = 'r_eff'
 
-ylab1 = r'$\Delta $ Cloud optical depth []'
+ylab1 = r'$\Delta $ Cloud optical thickness []'
 ylab2 = r'$\Delta r_e$ [$\mu$ m]'
 y_pos = 0
 
@@ -1790,7 +1818,7 @@ leg_els = [
 axs[0,0].legend(handles = leg_els, frameon=False)
 
 for ax in axs[:,0]:
-    ax.set_ylabel('Cloud optical depth []')
+    ax.set_ylabel('Cloud optical thickness []')
 for ax in axs[1,:]:
     ax.set_xlabel('CWP [g m$^{-2}$]')
 for ax in axs[0,:]:
@@ -2050,7 +2078,7 @@ plt.show()
 # %%
 x_var = 'CWP_cutlm'
 y_var='COT'
-itterations = 10000
+itterations = 50000
 for key in dic_df.keys():
     
     _df = dic_df[key].copy()
