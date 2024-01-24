@@ -938,22 +938,45 @@ ds_ukesm = dic_mod_ca['UKESM'][case_name_ukesm]
 from bs_fdbck_clean.util.BSOA_datamanip.ukesm import diam_vars, num_vars
 
 # %% [markdown]
-# #### Time step difference in UKESM
+# ## Divide number concentrations by three: 
+# The number concentrations have been erronously multiplied by three in this data, so we here divide by three to compensate for that
+
+# %%
+number_concentration_params_ukesm = ['nconcAS',
+ 'nconcCS',
+ 'nconcKI',
+ 'nconcKS',
+ 'nconcNS']
+
+# %%
+  
+        
+def add_scaling(_ds, nvar):
+    _ds[nvar+'_uncorrected'] = _ds[nvar].copy()
+    _ds[nvar] = (1/3)*_ds[nvar].copy()
+    _ds[nvar].attrs['corrected_scaling'] = 'True'
+    print(f'Dividing {nvar} by three')
+    return _ds
+
+
+for nvar in number_concentration_params_ukesm:
+    print(nvar)
+    if 'corrected_scaling' in ds_ukesm[nvar].attrs:
+        if ds_ukesm[nvar].attrs['corrected_scaling']=='True':
+            continue
+        else:
+            ds_ukesm = add_scaling(ds_ukesm, nvar)    
+    else:
+        ds_ukesm = add_scaling(ds_ukesm, nvar)
+      
+
+# %%
+#ds_ukesm['nconcAS'].plot(marker='.')
+ds_ukesm['nconcAS'].resample(time='10D').mean().plot(marker='.', alpha=.7)
+ds_ukesm['nconcAS_uncorrected'].resample(time='10D').mean().plot(marker='.', alpha=.7)
 
 # %% [markdown]
-# f1 = '/proj/bolinc/users/x_sarbl/other_data/BS-FDBCK/UKESM/aerocom3_UKESM_GlobalTraj-CE_Terpene_Surf_Emiss_ModelLevel_201806_3hourly_u-cr294.nc'
-# f2 = '/proj/bolinc/users/x_sarbl/other_data/BS-FDBCK/UKESM/aerocom3_UKESM_GlobalTraj-CE_ddrymodeNS_ModelLevel_201806_3hourly_u-cr294.nc'
-#
-# ds_u1 = xr.open_dataset(f1)
-# ds_u2 = xr.open_dataset(f2)
-#
-#
-# print('terpene emissions')
-# display(ds_u1)
-# print('terpene emissions')
-#
-# display(ds_u2)
-#
+# #### Time step difference in UKESM
 
 # %% [markdown]
 # #### Adjust the emissions to be at the same timestep
