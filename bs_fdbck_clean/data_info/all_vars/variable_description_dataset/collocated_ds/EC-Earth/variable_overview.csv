@@ -1,0 +1,63 @@
+var_code,varname,orig_varn,long_name,units,Note
+emiterp,emiterp,emiterp,Emissions monoterpene,kg m-2 s-1,
+emiisop,emiisop,emiisop,Emissions isoprene,kg m-2 s-1,
+loadsoa,loadsoa,loadsoa,Column burden SOA,kg m-2,
+od350aer,od350aer,od350aer,Aerosol optical depth 350,1,
+od440aer,od440aer,od440aer,Aerosol optical depth 440,1,
+od550aer,od550aer,od550aer,Aerosol optical depth 550,1,
+od550oa,od550oa,od550oa,OA optical depth 550,1,
+od550soa,od550soa,od550soa,SOA optical depth 550,1,
+od870aer,od870aer,od870aer,Aerosol optical depth 870,1,
+N_NUS,N_NUS,N_NUS,Number concentration mode NUS,1 m-3,
+N_AIS,N_AIS,N_AIS,Number concentration mode AIS,1 m-3,
+N_ACS,N_ACS,N_ACS,Number concentration mode ACS,1 m-3,
+N_COS,N_COS,N_COS,Number concentration mode COS,1 m-3,
+N_AII,N_AII,N_AII,Number concentration mode AII,1 m-3,
+N_ACI,N_ACI,N_ACI,Number concentration mode ACI,1 m-3,
+N_COI,N_COI,N_COI,Number concentration mode COI,1 m-3,
+RWET_NUS,RWET_NUS,RWET_NUS,Wet radius mode NUS,m,
+RWET_AIS,RWET_AIS,RWET_AIS,Wet radius mode AIS,m,
+RWET_ACS,RWET_ACS,RWET_ACS,Wet radius mode ACS,m,
+RWET_COS,RWET_COS,RWET_COS,Wet radius mode COS,m,
+RWET_ACI,RWET_ACI,RWET_ACI,Wet radius mode ACI,m,
+RWET_COI,RWET_COI,RWET_COI,Wet radius mode COI,m,
+RWET_AII,RWET_AII,RWET_AII,Wet radius mode AII,m,
+RDRY_NUS,RDRY_NUS,RDRY_NUS,Dry radius mode NUS,m,
+RDRY_AIS,RDRY_AIS,RDRY_AIS,Dry radius mode AIS,m,
+RDRY_ACS,RDRY_ACS,RDRY_ACS,Dry radius mode ACS,m
+RDRY_COS,RDRY_COS,RDRY_COS,Dry radius mode COS,m
+CCN0.20,CCN0.20,CCN0.20,CCN concentration at SS 0.20 perc,cm-3
+CCN1.00,CCN1.00,CCN1.00,CCN concentration at SS 1.00 perc,cm-3
+var130,temp,temp,Temperature,K
+var176,surf_net_srad,ssr,Surface net solar radiation,J m-2,
+var177,surf_net_lrad,str,Surface net thermal radiation,J m-2,
+#var208,toa_net_srad_clear,tsrc,"Top net solar radiation, clear sky",J m-2,
+#var209,toa_net_lrad_clear,ttrc,"Top net thermal radiation, clear sky",J m-2,
+var210,surf_net_srad_clear,ssrc,"Surface net solar radiation, clear sky",J m-2,
+var211,sur_net_lrad_clear,strc,"Surface net thermal radiation, clear sky",J m-2,
+var70,surf_net_srad_clearclean,,"Surface net solar radiation, clear sky, clean sky",J m-2,
+var71,surf_net_srad_clean,,"Surface net solar radiation, clean sky",J m-2,
+var74,surf_net_lrad_clearclean,,"Surface net thermal radiation, clear sky, clean sky",J m-2,
+var75,surf_net_lrad_clean,,"Surface net thermal radiation, clean sky",J m-2,
+M_BCACS,M_BCACS,M_BCACS,"mass of BC in ACS mode",kg m-3
+M_BCAII,M_BCAII,M_BCAII,"mass of BC in AII mode",kg m-3
+M_BCAIS,M_BCAIS,M_BCAIS,"mass of BC in AIS mode",kg m-3
+M_BCCOS,M_BCCOS,M_BCCOS,"mass of BC in COS mode",kg m-3
+M_DUACI,M_DUACI,M_DUACI,"mass of DU in ACI mode",kg m-3
+M_DUACS,M_DUACS,M_DUACS,"mass of DU in ACS mode",kg m-3
+M_DUCOI,M_DUCOI,M_DUCOI,"mass of DU in COI mode",kg m-3
+M_DUCOS,M_DUCOS,M_DUCOS,"mass of DU in COS mode",kg m-3
+M_POMACS,M_POMACS,M_POMACS,"mass of PO in MACS mode",kg m-3
+M_POMAII,M_POMAII,M_POMAII,"mass of PO in MAII mode",kg m-3
+M_POMAIS,M_POMAIS,M_POMAIS,"mass of PO in MAIS mode",kg m-3
+M_POMCOS,M_POMCOS,M_POMCOS,"mass of PO in MCOS mode",kg m-3
+M_SO4ACS,M_SO4ACS,M_SO4ACS,"mass of SO in 4ACS mode",kg m-3
+M_SO4COS,M_SO4COS,M_SO4COS,"mass of SO in 4COS mode",kg m-3
+M_SO4NUS,M_SO4NUS,M_SO4NUS,"mass of SO in 4NUS mode",kg m-3
+M_SOAACS,M_SOAACS,M_SOAACS,"mass of SO in AACS mode",kg m-3
+M_SOAAII,M_SOAAII,M_SOAAII,"mass of SO in AAII mode",kg m-3
+M_SOAAIS,M_SOAAIS,M_SOAAIS,"mass of SO in AAIS mode",kg m-3
+M_SOACOS,M_SOACOS,M_SOACOS,"mass of SO in ACOS mode",kg m-3
+M_SOANUS,M_SOANUS,M_SOANUS,"mass of SO in ANUS mode",kg m-3
+M_SSACS,M_SSACS,M_SSACS,"mass of SS in ACS mode",kg m-3
+M_SSCOS,M_SSCOS,M_SSCOS,"mass of SS in COS mode",kg m-3

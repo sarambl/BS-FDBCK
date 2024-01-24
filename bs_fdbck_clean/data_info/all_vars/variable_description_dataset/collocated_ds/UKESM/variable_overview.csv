@@ -1,0 +1,24 @@
+var_code,varname,orig_varn,long_name,units,Note
+Mass_Conc_OM_NS,Mass_Conc_OM_NS,m01s38i493,mass concentration organic aerosol mode NS,kg m-3,
+Mass_Conc_OM_KS,Mass_Conc_OM_KS,m01s38i494,mass concentration organic aerosol mode KS,kg m-3,
+Mass_Conc_OM_KI,Mass_Conc_OM_KI,m01s38i497,mass concentration organic aerosol mode KI,kg m-3,
+Mass_Conc_OM_AS,Mass_Conc_OM_AS,m01s38i495,mass concentration organic aerosol mode AS,kg m-3,
+Mass_Conc_OM_CS,Mass_Conc_OM_CS,m01s38i496,mass concentration organic aerosol mode CS,kg m-3,
+mmrtr_OM_NS,mmrtrOM_NS,mmrtr_OM_NS, mass mixing ratio organic aerosol in mode NS, mmr,
+mmrtr_OM_KS,mmrtrOM_KS,mmrtr_OM_KS, mass mixing ratio organic aerosol in mode KS, mmr,
+mmrtr_OM_KI,mmrtrOM_KI,mmrtr_OM_KI, mass mixing ratio organic aerosol in mode KI, mmr,
+mmrtr_OM_AS,mmrtrOM_AS,mmrtr_OM_AS, mass mixing ratio organic aerosol in mode AS, mmr,
+mmrtr_OM_CS,mmrtrOM_CS,mmrtr_OM_CS, mass mixing ratio organic aerosol in mode CS, mmr,
+nconcNS,conccnmodeNS,nconcNS,number concentration in mode NS,m-3
+nconcKS,conccnmodeKS,nconcKS,number concentration in mode KS,m-3
+nconcKI,conccnmodeKI,nconcKI,number concentration in mode KI,m-3
+nconcAS,conccnmodeAS,nconcAS,number concentration in mode AS,m-3
+nconcCS,conccnmodeCS,nconcCS,number concentration in mode CS,m-3
+ddryNS,ddrymodeNS,ddryNS,dry diameter mode NS,m
+ddryKS,ddrymodeKS,ddryKS,dry diameter mode KS,m
+ddryKI,ddrymodeKI,ddryKI,dry diameter mode KI,m
+ddryAS,ddrymodeAS,ddryAS,dry diameter mode AS,m
+ddryCS,ddrymodeCS,ddryCS,dry diameter mode CS,m
+Temp,T_at_EndOfTimestep,t_at_eot,Temperature,K
+SFisoprene,Isoprene_Surf_Emiss,isoprene_emiss,Emissions isoprene,kg m-2 s-1
+SFterpene,Terpene_Surf_Emiss,terpene_emiss,Emissions isoprene,kg m-2 s-1
