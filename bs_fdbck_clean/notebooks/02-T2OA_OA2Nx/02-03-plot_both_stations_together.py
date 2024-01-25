@@ -546,7 +546,7 @@ ax_dum2.axis('off')
 
 
 divide_NorESM_by_factor = 8 
-divide_UKESM_by_factor = 2
+divide_UKESM_by_factor = None
 
 
 varlistplot = ['N50','N100','N200']
@@ -560,9 +560,9 @@ dic_lims = {
     'N50': {'xlims':[.01,12], 'ylims':[1,4000]},
     'N100': {'xlims':[.01,12], 'ylims':[1,2500]},
     'N200': {'xlims':[.01,12], 'ylims':[1,1500]},
-    'N50-500': {'xlims':[.01,5], 'ylims':[1,1200]},
-    'N100-500': {'xlims':[.01,5], 'ylims':[1,900]},
-    'N200-500': {'xlims':[.01,5], 'ylims':[1,500]},
+    'N50-500': {'xlims':[.01,7], 'ylims':[1,1200]},
+    'N100-500': {'xlims':[.01,7], 'ylims':[1,900]},
+    'N200-500': {'xlims':[.01,7], 'ylims':[1,500]},
 
 }
 
@@ -869,7 +869,7 @@ dic_fits['ATTO'] =dict()
 
 
 divide_NorESM_by_factor = 8
-divide_UKESM_by_factor = 2
+divide_UKESM_by_factor = None
 
 
 varlistplot = ['N50','N100','N200']
@@ -883,9 +883,9 @@ dic_lims = {
     'N50': {'xlims':[.01,12], 'ylims':[1,4000]},
     'N100': {'xlims':[.01,12], 'ylims':[1,2500]},
     'N200': {'xlims':[.01,12], 'ylims':[1,1500]},
-    'N50-500': {'xlims':[.01,5], 'ylims':[1,1200]},
-    'N100-500': {'xlims':[.01,5], 'ylims':[1,900]},
-    'N200-500': {'xlims':[.01,5], 'ylims':[1,500]},
+    'N50-500': {'xlims':[.01,7], 'ylims':[1,1200]},
+    'N100-500': {'xlims':[.01,7], 'ylims':[1,900]},
+    'N200-500': {'xlims':[.01,7], 'ylims':[1,500]},
 
 }
 

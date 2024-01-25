@@ -3352,6 +3352,7 @@ _df = df_s[month_ma]
 (_df['SOA']/_df['OA']).plot()
 
 # %%
+print('hey')
 
 # %%
 
