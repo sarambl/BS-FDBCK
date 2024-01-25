@@ -38,6 +38,7 @@ pip install ebas_io-3.6.1-py3-none-any.wh
 Edit paths at the top of [bs_fdbck_clean/constants.py](bs_fdbck_clean/constants.py).
 
 ## Data organising:
+The observational data is organised as follows: 
 ### SMEAR:
 #### Meteo data:
 Pressure: 'Data/SMEARII/smeardata_20230307_pressure.csv'
