@@ -546,7 +546,7 @@ ax_dum2.axis('off')
 
 
 divide_NorESM_by_factor = 8 
-divide_UKESM_by_factor = 2
+divide_UKESM_by_factor = None
 
 
 varlistplot = ['N50','N100','N200']
@@ -560,9 +560,9 @@ dic_lims = {
     'N50': {'xlims':[.01,12], 'ylims':[1,4000]},
     'N100': {'xlims':[.01,12], 'ylims':[1,2500]},
     'N200': {'xlims':[.01,12], 'ylims':[1,1500]},
-    'N50-500': {'xlims':[.01,5], 'ylims':[1,1200]},
-    'N100-500': {'xlims':[.01,5], 'ylims':[1,900]},
-    'N200-500': {'xlims':[.01,5], 'ylims':[1,500]},
+    'N50-500': {'xlims':[.01,7], 'ylims':[1,1200]},
+    'N100-500': {'xlims':[.01,7], 'ylims':[1,900]},
+    'N200-500': {'xlims':[.01,7], 'ylims':[1,500]},
 
 }
 
@@ -869,7 +869,7 @@ dic_fits['ATTO'] =dict()
 
 
 divide_NorESM_by_factor = 8
-divide_UKESM_by_factor = 2
+divide_UKESM_by_factor = None
 
 
 varlistplot = ['N50','N100','N200']
@@ -883,9 +883,9 @@ dic_lims = {
     'N50': {'xlims':[.01,12], 'ylims':[1,4000]},
     'N100': {'xlims':[.01,12], 'ylims':[1,2500]},
     'N200': {'xlims':[.01,12], 'ylims':[1,1500]},
-    'N50-500': {'xlims':[.01,5], 'ylims':[1,1200]},
-    'N100-500': {'xlims':[.01,5], 'ylims':[1,900]},
-    'N200-500': {'xlims':[.01,5], 'ylims':[1,500]},
+    'N50-500': {'xlims':[.01,7], 'ylims':[1,1200]},
+    'N100-500': {'xlims':[.01,7], 'ylims':[1,900]},
+    'N200-500': {'xlims':[.01,7], 'ylims':[1,500]},
 
 }
 
@@ -1851,6 +1851,311 @@ plt.savefig(fn.with_suffix('.pdf'),bbox_inches='tight', dpi=200)
 plt.savefig(fn.with_suffix('.png'),bbox_inches='tight', dpi=200)
 
 df = make_pd_of_dic(dic_fits)
+df.to_csv(fn.with_suffix('.csv'))
+
+plt.show()
+
+# %% [markdown]
+# #### MAM
+
+# %%
+fig_main = plt.figure(constrained_layout=True,
+                  figsize=[15,6],
+                 )
+spec2 = gridspec.GridSpec( nrows=2,ncols=3, 
+                          width_ratios=[4,.1,4],
+                          height_ratios=[1,20], 
+                          figure=fig_main)
+
+markersize = 5
+
+subfig1 =  fig_main.add_subfigure(spec2[1, 0],frameon=True)
+subfig2 =  fig_main.add_subfigure(spec2[1, 1])
+subfig3 =  fig_main.add_subfigure(spec2[1, 2],frameon=True)
+subfig_up =  fig_main.add_subfigure(spec2[0, :])
+
+
+axs_smr = subfig1.subplots(3,5, sharex='col', sharey='row')
+#ax_fits = subfig2.subplots(3,1, sharex='col', sharey='row')
+axs_atto =subfig3.subplots(3,5, sharex='col', sharey='row')
+#subfig2.set_facecolor('#e9f2f9')##e5f8f8')
+# subfig3.set_facecolor('#fff4ea')
+
+dic_fits = {}
+dic_fits['SMR'] =dict()
+dic_fits['ATTO'] =dict()
+
+#subfig1.suptitle('SMEARII, Jul & Aug')
+#subfig3.suptitle('ATTO, JFM')
+#subfig2.suptitle('Fits')
+
+ax_dum = subfig_up.subplots(1)
+ax_dum.axis('off')
+
+
+divide_NorESM_by_factor = 4
+
+
+varlistplot = ['N50','N100','N200']
+xlab = r'OA [$\mu$gm$^{-3}$]'
+alpha_scatt = 0.4
+source_list = models_and_obs[::-1]
+v_x = 'OA'
+
+## Settings
+dic_lims = {
+    'N50': {'xlims':[.01,12], 'ylims':[1,4000]},
+    'N100': {'xlims':[.01,12], 'ylims':[1,2500]},
+    'N200': {'xlims':[.01,12], 'ylims':[1,1500]},
+    'N50-500': {'xlims':[.01,5], 'ylims':[1,2000]},
+    'N100-500': {'xlims':[.01,5], 'ylims':[1,1200]},
+    'N200-500': {'xlims':[.01,5], 'ylims':[1,700]},
+
+}
+
+dic_ylabels = {
+    'N50' : r'N$_{50}$  [cm$^{-3}$]',
+    'N100' : r'N$_{100}$  [cm$^{-3}$]',
+    'N200' : r'N$_{200}$  [cm$^{-3}$]',
+    'N50-500' : r'N$_{50-500}$  [cm$^{-3}$]',
+    'N100-500' : r'N$_{100-500}$  [cm$^{-3}$]',
+    'N200-500' : r'N$_{200-500}$  [cm$^{-3}$]',
+
+}
+
+
+
+
+select_station = 'SMR'
+season = 'JA'
+
+
+xscale='linear'
+yscale='linear'
+
+
+# OBS: 
+
+dic_df_med = dic_df_med_SMR
+axs_all = axs_smr
+fig = subfig1
+
+
+#fig, axs_all = plt.subplots(3,6,figsize=figsize, sharey='row', sharex='col')
+## Settings
+legends_smr = []
+legends_atto = []
+legs =[]
+
+for i,v_y in enumerate(varlistplot):
+    dic_fits[select_station][v_y] = dict()
+    # Make plot
+    ylab = dic_ylabels[v_y]
+    ylims = dic_lims[v_y]['ylims']
+    xlims = dic_lims[v_y]['xlims']
+    
+    axs_sub = axs_all[i,:]
+    axs_sub[0].set_ylabel(ylab)
+    make_plot2(v_x, v_y, xlims, ylims, season, 
+              xlab=xlab, ylab=ylab, alpha_scat=alpha_scatt,
+             source_list = source_list, fig=fig, 
+               axs=axs_sub,
+              xscale='linear', yscale='linear',
+              dic_df_med = dic_df_med,
+           select_station= select_station,
+               markersize=markersize,
+         )
+
+    
+    for mo, ax in zip(source_list, axs_sub):
+        dic_fits[select_station][v_y][mo] = dict()
+
+        df_s =  dic_df_med[mo]
+        
+        print(mo)
+        mask_months = select_months(df_s, season=season)
+        df_s = df_s[mask_months].copy()
+        popt, pov, label, func = func_smr(df_s,v_x,v_y)
+            
+            
+        legends_smr.append(label)
+
+        plot_fit(func, popt, mo, xlims, yscale, xscale, ax, label,)
+        #plot_fit(func, popt, mo, xlims, yscale, xscale,  ax_fits[i],label,extra_plot=True)
+
+        dic_fits[select_station][v_y][mo]['label'] = label
+        dic_fits[select_station][v_y][mo]['popt'] = popt
+        dic_fits[select_station][v_y][mo]['pcov'] = pov
+        dic_fits[select_station][v_y][mo]['standard_error'] = np.sqrt(np.diag(dic_fits[select_station][v_y][mo]['pcov']))
+        
+        dic_fits[select_station][v_y][mo]['func'] = func
+        dic_fits[select_station][v_y][mo]['R2'] = get_r2(df_s,v_x,v_y, popt, func)
+        dic_fits[select_station][v_y][mo]['corr'] = get_corr(df_s,v_x,v_y)
+        print( get_r2(df_s,v_x,v_y, popt, func))
+        dic_fits[select_station][v_y][mo] = calc_table_se(dic_fits[select_station][v_y][mo])   
+        
+        
+        ax.set_yscale(yscale)
+        ax.set_xscale(xscale)
+    #leg = axs_sub[-1].legend(bbox_to_anchor=(1,1,), frameon=False)
+
+    #legs.append(leg)
+
+
+    
+for ax in axs_sub:
+    ax.set_xlabel(xlab)
+sns.despine(fig) 
+
+
+
+
+
+
+
+
+varlistplot = ['N50-500','N100-500','N200-500']
+
+select_station = 'ATTO'
+season = 'JFMAM'
+
+xscale='linear'
+yscale='linear'
+
+
+# OBS: 
+
+dic_df_med = dic_df_med_ATTO
+axs_all = axs_atto
+fig = subfig3
+select_station = 'ATTO'
+
+
+#fig, axs_all = plt.subplots(3,6,figsize=figsize, sharey='row', sharex='col')
+## Settings
+
+legs =[]
+
+for i,v_y in enumerate(varlistplot):
+    dic_fits[select_station][v_y] = dict()
+    
+    # Make plot
+    ylab = dic_ylabels[v_y]
+    ylims = dic_lims[v_y]['ylims']
+    xlims = dic_lims[v_y]['xlims']
+    axs_sub = axs_all[i,:]
+    axs_sub[0].set_ylabel(ylab)
+
+    make_plot2(v_x, v_y, xlims, ylims, season, 
+              xlab=xlab, ylab=ylab, alpha_scat=alpha_scatt,
+             source_list = source_list, fig=fig, 
+               axs=axs_sub,
+              xscale='linear', yscale='linear',
+              dic_df_med = dic_df_med,
+           select_station= select_station,
+               divide_NorESM_by_factor=divide_NorESM_by_factor,
+         )
+
+
+    for mo, ax in zip(source_list, axs_sub):
+        dic_fits[select_station][v_y][mo] = dict()
+        
+        df_s =  dic_df_med[mo]
+        print(mo)
+        mask_months = select_months(df_s, season=season)
+        df_s = df_s[mask_months].copy()
+        if (mo =='NorESM') &  (divide_NorESM_by_factor is not None):
+            df_s = df_s/divide_NorESM_by_factor
+            ax.set_facecolor('#fff6f6')
+    
+        popt, pov, label, func = func_atto(df_s,v_x,v_y)
+        legends_atto.append(label)
+        
+        plot_fit(func, popt, mo, xlims, yscale, xscale, ax,label, linestyle='dashed')
+        #plot_fit(func, popt, mo, xlims, yscale, xscale,  ax_fits[i],label,  extra_plot=True,linestyle='dashed',)
+        ax.set_xlim(xlims)
+        #dic_fits['ATTO'][v_y][mo]['label'] = label
+        #dic_fits['ATTO'][v_y][mo]['popt'] = popt
+        #dic_fits['ATTO'][v_y][mo]['pov'] = pov 
+        
+        dic_fits[select_station][v_y][mo]['label'] = label
+        dic_fits[select_station][v_y][mo]['popt'] = popt
+        dic_fits[select_station][v_y][mo]['pcov'] = pov
+        dic_fits[select_station][v_y][mo]['standard_error'] = np.sqrt(np.diag(dic_fits[select_station][v_y][mo]['pcov']))
+        
+        #dic_fits[select_station][v_y][mo]['func'] = func
+        dic_fits[select_station][v_y][mo]['R2'] = get_r2(df_s,v_x,v_y, popt, func)
+        dic_fits[select_station][v_y][mo]['corr'] = get_corr(df_s,v_x,v_y)
+        dic_fits[select_station][v_y][mo] = calc_table_se(dic_fits[select_station][v_y][mo])        
+
+        _a = label.split('x')[0][1:]
+        _b = label.split('x')[1][:-1]
+        if _b[0]=='+':
+            _b=_b[1:]
+        ax.text(left, top, f'a=${_a}$ \nb=${_b}$',
+        horizontalalignment='left',
+        verticalalignment='top',
+        transform=ax.transAxes)
+
+        ax.set_yscale(yscale)
+        ax.set_xscale(xscale)
+        #ax.legend(frameon=False, fontsize=10)
+    
+    #leg = axs_sub[-1].legend(bbox_to_anchor=(1,1,), frameon=False)
+
+    #legs.append(leg)
+
+
+    
+for ax in axs_sub:
+    ax.set_xlabel(xlab)
+sns.despine(fig) 
+
+
+
+
+#for i, v_y in enumerate(varlistplot):
+#    xlims = dic_lims[v_y]['xlims']
+#    ax = ax_fits[i]
+    
+    #ax.set_xlim(xlims)
+#    ax.set_ylim(dic_lims[v_y]['ylims'])
+#    ax.set_yticklabels([])
+#    ax.set_facecolor('#e9f2f9')##e5f8f8')
+#    sns.despine(ax)
+#ax.set_xlabel(xlab)
+sns.despine(subfig2) 
+
+subfig1.suptitle('SMEARII: Jul,Aug', size=16, y=1.05)
+subfig2.suptitle('Fits', size=16, y=1.05, c='w')
+subfig3.suptitle(f'ATTO: {dic_season_nicename[season]}', size=16, y=1.05)
+
+#axs_all = list(ax_fits.flatten())+list(axs_smr.flatten())+ list(axs_atto.flatten())
+axs_all = list(list(axs_smr.flatten())+ list(axs_atto.flatten()))
+for ax in axs_all:
+    ax.grid(color = 'grey', linestyle = ':', linewidth = 0.5)
+
+
+
+#for ax in axs_atto[:,0]:
+#    ax.set_yticklabels([])
+#    ax.set_ylabel('')
+
+for ax in axs_atto[1:,:].flatten():
+    ax.set_title('')
+
+
+for ax in axs_smr[1:,:].flatten():
+    ax.set_title('')
+
+#ax_fits[0].set_title('.', color='w')
+fn = make_fn_scat(f'together_{season}', v_x, 'Nx')
+print(fn)
+plt.savefig(fn.with_suffix('.pdf'),bbox_inches='tight', dpi=200)
+plt.savefig(fn.with_suffix('.png'),bbox_inches='tight', dpi=200)
+
+df = make_pd_of_dic(dic_fits)
+
 df.to_csv(fn.with_suffix('.csv'))
 
 plt.show()

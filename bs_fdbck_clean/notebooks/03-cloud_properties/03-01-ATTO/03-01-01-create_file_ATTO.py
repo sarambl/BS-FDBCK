@@ -17,6 +17,8 @@
 # # Compute files for cloud plots for models
 
 # %%
+
+# %%
 # %load_ext autoreload
 # %autoreload 2
 
@@ -147,9 +149,6 @@ for mod in models:
         dic_df_station[mod][ca] = pd.read_csv(fn_out, index_col=0)
         dic_df_station[mod][ca].index = pd.to_datetime(dic_df_station[mod][ca].index)
         # dic_df_mod_case[mod][ca].to_csv(fn_out)
-
-# %%
-pd.read_csv('/proj/bolinc/users/x_sarbl/analysis/BS-FDBCK/Data/model_station/ATTO/ATTO_station_UKESM_AEROCOMTRAJ_ilev-1.csv', index_col=0)
 
 # %% [markdown]
 # ## Calculate datasets for each model
@@ -527,7 +526,7 @@ ds_noresm = ds_all.copy()
 for seas in calc_seasons:
     _fn_csv = fn_final_csv_stem.parent / (fn_final_csv_stem.stem + seas + '.csv')
     print(_fn_csv)
-    if True:# not _fn_csv.exists():
+    if not _fn_csv.exists():
         start = timer()
 
         dic_df = get_dic_df_mod(
@@ -577,7 +576,6 @@ _ds['OA_STP'].sel(time='2012-05-30 02:00:00').plot()
 # #### Names etc
 
 # %%
-
 case_name = 'SALSA_BSOA_feedback'
 case_name_echam = 'SALSA_BSOA_feedback'
 time_res = 'hour'
@@ -904,7 +902,7 @@ for key in dic_ds:
 for seas in calc_seasons:
     _fn_csv = fn_final_echam_csv_stem.parent / (fn_final_echam_csv_stem.stem + seas + '.csv')
     print(_fn_csv)
-    if True:  # not _fn_csv.exists():
+    if not _fn_csv.exists():
         # for key in dic_ds.keys():
 
         dic_df = get_dic_df_mod(dic_ds, select_hours_clouds=True, summer_months=season2month[seas],
@@ -921,9 +919,6 @@ for seas in calc_seasons:
         # with ProgressBar():
         # df_mod = df_mod.dropna()
         df_mod.to_csv(_fn_csv)
-
-# %%
-df_mod.plot.scatter(x='CWP', y='COT')
 
 # %%
 _fn_csv
@@ -959,6 +954,7 @@ cases_ec_earth = [case_name_ec_earth]
 # %%
 fn_intermediate_ec_earth = input_path_ec_earth / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}_intermediate.nc'
 fn_intermediate_ec_earth_lev = input_path_ec_earth / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}_intermediate_lev.nc'
+fn_intermediate_tmp_ec_earth = input_path_ec_earth / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}_intermediate_tmp.nc'
 
 fn_final_ec_earth = input_path_ec_earth / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}.nc'
 fn_final_ec_earth_csv = input_path_ec_earth / f'{case_name}_{from_time1}-{to_time2}_ALL-VARS_concat_subs_{str_coordlims}.csv'
@@ -1008,7 +1004,7 @@ from bs_fdbck_clean.util.BSOA_datamanip.ec_earth import (
 # #### Fix units, calc cloud properties etc.
 
 # %%
-fn_intermediate_ec_earth
+fn_intermediate_ec_earth.exists()
 
 # %%
 if not fn_intermediate_ec_earth.exists():
@@ -1033,14 +1029,23 @@ if not fn_intermediate_ec_earth.exists():
         )
 
         dic_ds[key] = _ds
-
+    print('1')
     ds = dic_ds['IFS']
-
-    ds = calculate_incld_values_warmclouds(ds)
+    if not fn_intermediate_tmp_ec_earth.exists():
+        print('computing incld warmclouds')
+        ds = calculate_incld_values_warmclouds(ds)
+        delayed_obj = ds.to_netcdf(fn_intermediate_tmp_ec_earth, compute=False)
+        with ProgressBar():
+            delayed_obj.compute()
+    
+    ds = xr.open_dataset(fn_intermediate_tmp_ec_earth)
+    print('2')
 
     ds = extract_cloud_top(ds)
-
+    print('2 over')
+    
     dic_ds['IFS'] = ds
+    print('3')
 
     for key in dic_ds:
         _ds = dic_ds[key]
@@ -1052,12 +1057,14 @@ if not fn_intermediate_ec_earth.exists():
     ds = dic_ds['IFS']
     ds = ds.sortby('lat')
     ds = ds.sortby('lon')
+    print('4')
 
     ds_t['lev'] = ds['lev']
     ds_t = ds_t.sortby('lat')
     ds_t = ds_t.sortby('lon')
     ds_t['temp'].plot()
     plt.show()
+    print('5')
 
     drop_list = ['U', 'V', 'temp']
     ds = xr.merge([ds.drop_vars(drop_list).drop_dims(['plev']), ds_t[['temp']]])
@@ -1366,7 +1373,7 @@ for seas in calc_seasons:
     _fn_csv = fn_final_ec_earth_csv_stem.parent / (fn_final_ec_earth_csv_stem.name + seas + '.csv')
     print(_fn_csv)
 
-    if True:  # not _fn_csv.exists():
+    if not _fn_csv.exists():
         # for key in dic_ds.keys():
 
         dic_df = get_dic_df_mod(dic_ds,
@@ -1387,9 +1394,6 @@ for seas in calc_seasons:
         # with ProgressBar():
         # df_mod = df_mod.dropna()
         df_mod.to_csv(_fn_csv)
-
-# %%
-df_mod['r_eff'].plot.hist()
 
 # %%
 print('Done')

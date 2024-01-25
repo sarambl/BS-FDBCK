@@ -149,6 +149,7 @@ case_name_noresm = 'OsloAero_intBVOC_f09_f09_mg17_fssp245'
 
 case_name1 = 'OsloAero_intBVOC_f09_f09_mg17_full'
 case_name2 = 'OsloAero_intBVOC_f09_f09_mg17_ssp245'
+model_name_noresm = 'NorESM'
 
 # %%
 cases = [case_name]
@@ -157,7 +158,7 @@ cases = [case_name]
 # #### Path input data
 
 # %%
-path_input_data_noresm = path_extract_latlon_outdata / case_name
+path_input_data_noresm = path_extract_latlon_outdata /model_name_noresm / case_name
 
 # %% [markdown]
 # #### Filenames to store products in 3d/2d

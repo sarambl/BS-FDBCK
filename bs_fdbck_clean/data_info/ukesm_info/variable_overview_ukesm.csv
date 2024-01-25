@@ -43,7 +43,3 @@ conv_iwp,Convective_IWP,conv_iwp,atmosphere,
 conv_lwp,Convective_LWP,conv_lwp,atmosphere,
 rho,rho,rho,atmosphere,
 layer_thickness,layer_thickness,layer,,
-
-
-
-

@@ -1317,7 +1317,7 @@ for key in dic_df.keys():
     df_s_out = df_s_out.rename(rename_dictionary_for_source_data,axis=1)
     list_of_datasets_for_source_data.append(df_s_out.copy())
     
-fn = make_fn(f'ATTO_data', 'fig4', '')
+fn = make_fn(f'{station}_data', 'fig4', '')
 save_data_df = pd.concat(list_of_datasets_for_source_data,axis=0 )
 save_data_df.to_csv(fn.with_suffix('.csv'))
 print(fn.with_suffix('.csv'))

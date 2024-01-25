@@ -1,3 +1,4 @@
+import xarray
 sized_varListNorESM = {'NCONC': ['NCONC01', 'NCONC02', 'NCONC04', 'NCONC05', 'NCONC06', 'NCONC07', 'NCONC08',
                                  'NCONC09', 'NCONC10', 'NCONC12', 'NCONC14'],
                        'SIGMA': ['SIGMA01', 'SIGMA02', 'SIGMA04', 'SIGMA05', 'SIGMA06', 'SIGMA07', 'SIGMA08',
