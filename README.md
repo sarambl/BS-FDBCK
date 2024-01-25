@@ -38,8 +38,10 @@ pip install ebas_io-3.6.1-py3-none-any.wh
 Edit paths at the top of [bs_fdbck_clean/constants.py](bs_fdbck_clean/constants.py).
 
 ## Data organising:
-The observational data is organised as follows: 
+The observational data is organised as follows:
+
 ### SMEAR:
+<details>
 #### Meteo data:
 Pressure: 'Data/SMEARII/smeardata_20230307_pressure.csv'
 Radiation: 'Data/SMEARII/smeardata_20221116_radiation.csv'
@@ -53,8 +55,11 @@ Meteo: 'Data/SMEARII/smeardata_20221116_2012-2014.csv','Data/SMEARII/smeardata_2
 
 #### ACSM data: 
 'Data/ACSM_DEFAULT.mat'
+</details>
 
 ### ATTO: 
+<details>
+
 #### Meteo data: 
 'Data/ATTO/meteodataComplete.dat'
 'Data/ATTO/meteo/*'
@@ -65,10 +70,15 @@ Meteo: 'Data/SMEARII/smeardata_20221116_2012-2014.csv','Data/SMEARII/smeardata_2
 #### ACSM data:
 'Data/ATTO/QACSM_time_series_C4_60m_2014_2016STP_v3.xlsx'
 'Data/ATTO/acsm_data_for_sara_2017.txt'
+</details>
 
 ### Satellite data:
+<details>
+
 Download satellite data from https://ladsweb.modaps.eosdis.nasa.gov/search/order/2/MYD08_D3--61 to directory:
 'Data/satellite/MODIS_raw/'
+
+</details>
 
 ## To reproduce results:
 ### Preprocess model data:
