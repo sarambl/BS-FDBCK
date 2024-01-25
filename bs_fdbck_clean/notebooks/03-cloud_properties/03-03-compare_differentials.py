@@ -82,10 +82,12 @@ dic_station2nicename= dict(
 
 # %%
 f_smr = f'03-02-SMR/Plots/cloud_props__percentile_OA_OA_perc_{season_smr}.csv'
+print(f_smr)
 
 
 # %%
 f_atto =f'03-01-ATTO/Plots/cloud_props__percentile_OA_OA_perc_{season_atto}.csv'
+print(f_atto)
 
 
 # %%

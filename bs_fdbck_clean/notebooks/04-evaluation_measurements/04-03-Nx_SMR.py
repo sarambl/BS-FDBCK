@@ -130,6 +130,52 @@ for mod in models:
         dic_df_pre[mod][ca].index = pd.to_datetime(dic_df_pre[mod][ca].index)
         #dic_df_mod_case[mod][ca].to_csv(fn_out)
 
+# %% [markdown]
+# ### Check UKESM 
+
+# %%
+dic_df_pre['UKESM']['AEROCOMTRAJ'].columns
+
+# %%
+df_test = dic_df_pre['UKESM']['AEROCOMTRAJ']#['nconcAS']
+df_test['nconc'] = 0
+for v in ['nconcAS', 'nconcCS','nconcKI', 'nconcKS', 'nconcNS']:
+    df_test['nconc'] += df_test[v]
+
+
+# %%
+df_test = dic_df_pre['UKESM']['AEROCOMTRAJ']#['nconcAS']
+df_test['OAnconc'] = 0
+for v in [ 'Mass_Conc_OM_AS', 'Mass_Conc_OM_CS',
+       'Mass_Conc_OM_KI', 'Mass_Conc_OM_KS', 'Mass_Conc_OM_NS']:
+    df_test['OAnconc'] += df_test[v]
+
+
+# %%
+df_test['nconc'].plot()
+
+# %%
+df_test['month'] = df_test.index.month
+(1/3*df_test['nconc'].groupby(df_test['month']).mean()).plot()
+#(df_test['nconc'].groupby(df_test['month']).mean()).plot()
+
+# %%
+df_test['month'] = df_test.index.month
+_df = df_test['2012':'2014']
+(1/3*_df['nconc'].groupby(_df['month']).mean()).plot()
+(df_test['nconc'].groupby(df_test['month']).mean()).plot()
+
+# %%
+df_test['month'] = df_test.index.month
+_df = df_test['2012':'2014']
+(_df['OAnconc'].groupby(_df['month']).mean()).plot(label='no divide')
+(1/3*_df['OAnconc'].groupby(_df['month']).mean()).plot(label='*1/3')
+plt.legend()
+#(df_test['OA'].groupby(df_test['month']).mean()).plot()
+
+# %% [markdown]
+# ### Check UKESM done 
+
 # %%
 for mod in models:
     for ca in mod2cases[mod]:

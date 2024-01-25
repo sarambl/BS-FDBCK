@@ -1167,6 +1167,49 @@ for ax, y_var in zip(axs,[y_var1, y_var2]):
         dic_median_CI[y_var][key]['number']=df_numb#['n_str']
 
 
+# %% [markdown]
+# ## Save source data:
+
+# %%
+list_of_datasets_for_source_data = []
+
+# %%
+rename_dictionary_for_source_data = {
+    'OA':'OA [ugm-3]',
+    'COT':'COT []',
+    'r_eff':'r_eff [um]',
+}
+
+# %%
+varlist_out_all = ['OA','COT','r_eff']
+varlist_out_no_COT = ['OA','r_eff']
+
+hue_var = 'OA_category'
+x_var = 'CWP_cut2lm'
+y_var1 = 'COT'
+y_var2 = 'r_eff'
+
+for key in dic_df.keys():
+    print(key)
+    if (key in ['EC-Earth', 'UKESM']) :
+        vl = varlist_out_no_COT
+    else:
+        vl = varlist_out_all        
+    _df = dic_df[key][vl].copy()
+     
+    df_s_out = _df.copy()
+    df_s_out['station'] = 'ATTO'
+    df_s_out['data_source'] = key
+    df_s_out = df_s_out.rename(rename_dictionary_for_source_data,axis=1)
+    list_of_datasets_for_source_data.append(df_s_out.copy())
+    
+fn = make_fn(f'{station}_data', 'fig4', '')
+save_data_df = pd.concat(list_of_datasets_for_source_data,axis=0 )
+save_data_df.to_csv(fn.with_suffix('.csv'))
+print(fn.with_suffix('.csv'))
+    
+
+
 # %%
 v = 'COT'
 for source in dic_median_CI[v].keys():
