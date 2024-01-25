@@ -45,6 +45,8 @@ Radiation: 'Data/SMEARII/smeardata_20221116_radiation.csv'
 Temperature:'Data/SMEARII/smeardata_20230307_temp4m.csv'
 Meteo: 'Data/SMEARII/smeardata_20221116_2012-2014.csv','Data/SMEARII/smeardata_20221116_2014-2016.csv','Data/SMEARII/smeardata_20221116_2016-2018.csv', 'Data/SMEARII/smeardata_20221116_2018-2019.csv',
 
+
+
 #### Size distribution:
 'Data/EBAS/raw_data/SMR/FI0050R.20120101000000.20181205100800.dmps.particle_number_size_distribution.pm10.1y.1h.FI03L_UHEL_DMPS_HYY_01.FI03L__TRY_TDMPS.lev2.nc'
 
