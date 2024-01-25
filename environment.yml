@@ -1,9 +1,7 @@
 name: env_bs_fdbck
 channels:
   - conda-forge
-  - defaults
 dependencies:
-  - bokeh
   - cartopy
   - cftime
   - conda
@@ -12,7 +10,6 @@ dependencies:
   - jupyterlab
   - jupytext
   - matplotlib
-  - matplotlib-base
   - nbconvert
   - nbformat
   - ncl
