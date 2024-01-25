@@ -29,17 +29,43 @@ pip install ebas_io-3.6.1-py3-none-any.wh
 
 - The full ATTO aerosol measurement data sets can be downloaded in the ATTO data portal under [https://www.attodata.org/](https://www.attodata.org/).
 
-- Temperature measurements from ATTO are available for download at [https://www.attodata.org/](attodata.org).
+- Temperature measurements from ATTO are available for download at [https://www.attodata.org/](https://www.attodata.org/).
 
-- Model data can be downloaded from: #TODO!
+- Model data can be downloaded from:
+  https://doi.org/10.17043/blichner-2023-bvoc-aerosol-1 
 
 ## Edit settings and paths: 
-Edit paths at the top of [bs_fdbck_clean/constants.py](bs_fdbck/constants.py).
+Edit paths at the top of [bs_fdbck_clean/constants.py](bs_fdbck_clean/constants.py).
 
-## Data organising: 
+## Data organising:
+### SMEAR:
+#### Meteo data:
+Pressure: 'Data/SMEARII/smeardata_20230307_pressure.csv'
+Radiation: 'Data/SMEARII/smeardata_20221116_radiation.csv'
+Temperature:'Data/SMEARII/smeardata_20230307_temp4m.csv'
+Meteo: 'Data/SMEARII/smeardata_20221116_2012-2014.csv','Data/SMEARII/smeardata_20221116_2014-2016.csv','Data/SMEARII/smeardata_20221116_2016-2018.csv', 'Data/SMEARII/smeardata_20221116_2018-2019.csv',
 
+#### Size distribution:
+'Data/EBAS/raw_data/SMR/FI0050R.20120101000000.20181205100800.dmps.particle_number_size_distribution.pm10.1y.1h.FI03L_UHEL_DMPS_HYY_01.FI03L__TRY_TDMPS.lev2.nc'
 
+#### ACSM data: 
+'Data/ACSM_DEFAULT.mat'
 
+### ATTO: 
+#### Meteo data: 
+'Data/ATTO/meteodataComplete.dat'
+'Data/ATTO/meteo/*'
+
+#### Size distribution: 
+'Data/ATTO/ds_atto_2014_2019_4Sara.nc'
+
+#### ACSM data:
+'Data/ATTO/QACSM_time_series_C4_60m_2014_2016STP_v3.xlsx'
+'Data/ATTO/acsm_data_for_sara_2017.txt'
+
+### Satellite data:
+Download satellite data from https://ladsweb.modaps.eosdis.nasa.gov/search/order/2/MYD08_D3--61 to directory:
+'Data/satellite/MODIS_raw/'
 
 ## To reproduce results:
 ### Preprocess model data:
