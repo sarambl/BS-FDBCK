@@ -1,6 +1,8 @@
 # BS-FDBCK
 Analysis for BSOA paper:
 
+Blichner, S.M. et al. (2024) ‘Process-evaluation of forest aerosol-cloud-climate feedback shows clear evidence from observations and large uncertainty in models’, Nature Communications, 15(1), p. 969. Available at: https://doi.org/10.1038/s41467-024-45001-y.
+
 
 # Setup:
 ### Download:
