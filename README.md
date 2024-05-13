@@ -42,6 +42,7 @@ The observational data is organised as follows:
 
 ### SMEAR:
 <details>
+    
 #### Meteo data:
 Pressure: 'Data/SMEARII/smeardata_20230307_pressure.csv'
 Radiation: 'Data/SMEARII/smeardata_20221116_radiation.csv'
